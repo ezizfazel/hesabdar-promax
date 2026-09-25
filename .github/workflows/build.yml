@@ -24,15 +24,16 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Rebuild Modern Android Project
+      - name: Setup Android Project
         run: |
           rm -rf android
           flutter create . --platforms=android --org com.promax.hesabdar
           sed -i '/<application/i \    <uses-permission android:name="android.permission.INTERNET"/>\n    <uses-permission android:name="android.permission.CAMERA"/>' android/app/src/main/AndroidManifest.xml
           sed -i 's/<application/<application android:usesCleartextTraffic="true"/' android/app/src/main/AndroidManifest.xml
 
-      - name: Get Dependencies
-        run: flutter pub get
+      - name: Resolve Dependencies
+        run: |
+          flutter pub get
 
       - name: Build APK
         run: flutter build apk --release
