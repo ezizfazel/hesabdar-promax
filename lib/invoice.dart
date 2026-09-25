@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import 'package:shamsi_date/shamsi_date.dart';
 
 class InvoiceHelper {
@@ -17,9 +18,12 @@ class InvoiceHelper {
     required int remainingPrice,
     required String paymentMethod,
     required String adminName,
+    required String description,
     required bool isSale,
   }) async {
     final pdf = pw.Document();
+    final font = await PdfGoogleFonts.vazirmatnRegular();
+    final fontBold = await PdfGoogleFonts.vazirmatnBold();
     final now = Jalali.now();
     final timeStr = "${DateTime.now().hour}:${DateTime.now().minute.toString().padLeft(2, '0')}";
 
@@ -28,24 +32,31 @@ class InvoiceHelper {
     pdf.addPage(
       pw.Page(
         pageFormat: PdfPageFormat.a4,
+        theme: pw.ThemeData.withFont(base: font, bold: fontBold),
         textDirection: pw.TextDirection.rtl,
         build: (pw.Context ctx) => pw.Container(
           padding: const pw.EdgeInsets.all(24),
-          decoration: pw.BoxDecoration(border: pw.Border.all(width: 2, color: PdfColor.fromHex("#0F4C81"))),
+          decoration: pw.BoxDecoration(border: pw.Border.all(width: 1.5, color: PdfColor.fromHex("#0F4C81"))),
           child: pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.stretch,
             children: [
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text("ساعت: $timeStr | متصدی: $adminName"),
-                  pw.Text("فروشگاه موبایل پرومکس ($title)", style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold, color: PdfColor.fromHex("#0F4C81"))),
-                  pw.Text("تاریخ: ${now.year}/${now.month}/${now.day}"),
+                  pw.Text("ساعت: $timeStr | متصدی: $adminName", style: const pw.TextStyle(fontSize: 10)),
+                  pw.Column(
+                    children: [
+                      pw.Text("فروشگاه موبایل پرومکس ($title)", style: pw.TextStyle(fontSize: 15, fontWeight: pw.FontWeight.bold, color: PdfColor.fromHex("#0F4C81"))),
+                      pw.SizedBox(height: 2),
+                      pw.Text("سامانه هوشمند صدور فاکتور و مبایعه‌نامه", style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
+                    ],
+                  ),
+                  pw.Text("تاریخ: ${now.year}/${now.month}/${now.day}", style: const pw.TextStyle(fontSize: 10)),
                 ],
               ),
-              pw.Divider(thickness: 1.2),
+              pw.Divider(thickness: 1, color: PdfColor.fromHex("#0F4C81")),
               pw.SizedBox(height: 8),
-              pw.Text("طرف معامله: نام: $personName | شماره تماس: $phone | کدملی: $nationalId", style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+              pw.Text("طرف معامله: نام: $personName | شماره تماس: $phone | کد ملی: $nationalId", style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10.5)),
               pw.SizedBox(height: 10),
               pw.Table(
                 border: pw.TableBorder.all(color: PdfColors.grey400),
@@ -53,8 +64,8 @@ class InvoiceHelper {
                   pw.TableRow(
                     decoration: const pw.BoxDecoration(color: PdfColors.grey200),
                     children: [
-                      pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Center(child: pw.Text("کالا / مدل"))),
-                      pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Center(child: pw.Text("شناسه IMEI"))),
+                      pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Center(child: pw.Text("نام کالا و مدل"))),
+                      pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Center(child: pw.Text("شناسه سریال (IMEI)"))),
                       pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Center(child: pw.Text("مبلغ کل (تومان)"))),
                     ],
                   ),
@@ -81,16 +92,24 @@ class InvoiceHelper {
                     ],
                   ),
                 ),
-              pw.SizedBox(height: 12),
+              if (description.isNotEmpty) ...[
+                pw.SizedBox(height: 8),
+                pw.Container(
+                  padding: const pw.EdgeInsets.all(6),
+                  color: PdfColors.grey50,
+                  child: pw.Text("یادداشت و توضیحات معامله: $description", style: const pw.TextStyle(fontSize: 9.5)),
+                ),
+              ],
+              pw.SizedBox(height: 10),
               pw.Container(
                 padding: const pw.EdgeInsets.all(8),
-                decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColors.grey400)),
+                decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColors.grey300)),
                 child: pw.Text(
                   isSale
-                      ? "این فاکتور تاییدیه تحویل دستگاه به خریدار بوده و خریدار متعهد به پرداخت مانده در سررسید مقرر می‌باشد."
-                      : "فروشنده اقرار می‌نماید که دستگاه فوق با شناسه IMEI ذکر شده فاقد هرگونه منع قانونی و سرقت بوده و پاسخگوی مراجع قضایی خواهد بود.",
+                      ? "این برگه به منزله فاکتور رسمی تحویل دستگاه بوده و خریدار محترم با مشخصات فوق موظف به تسویه الباقی مانده بدهی در موعد مقرر می‌باشد."
+                      : "فروشنده با امضای این سند تصریح می‌نماید که دستگاه فوق با شناسه IMEI ثبت‌شده متعلق به شخص وی بوده و فاقد هرگونه منع رجیستری یا گزارش سرقت می‌باشد.",
                   textAlign: pw.TextAlign.justify,
-                  style: const pw.TextStyle(fontSize: 9),
+                  style: const pw.TextStyle(fontSize: 8.5),
                 ),
               ),
               pw.Spacer(),
@@ -98,10 +117,10 @@ class InvoiceHelper {
                 mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
                 children: [
                   pw.Text("امضا و اثر انگشت طرف اول"),
-                  pw.Text("مهر و امضای مدیریت فروشگاه پرومکس"),
+                  pw.Text("مهر و امضای فروشگاه پرومکس"),
                 ],
               ),
-              pw.SizedBox(height: 20),
+              pw.SizedBox(height: 15),
             ],
           ),
         ),
