@@ -24,14 +24,12 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Setup Android with Complete Camera Config
+      - name: Setup Android Project
         run: |
           rm -rf android
           flutter create . --platforms=android --org com.promax.hesabdar
-          # تنظیم دسترسی‌های دوربین و ترافیک شبکه
           sed -i '/<application/i \    <uses-permission android:name="android.permission.INTERNET"/>\n    <uses-permission android:name="android.permission.CAMERA"/>\n    <uses-feature android:name="android.hardware.camera" android:required="false" />\n    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />' android/app/src/main/AndroidManifest.xml
           sed -i 's/<application/<application android:usesCleartextTraffic="true"/' android/app/src/main/AndroidManifest.xml
-          # تنظیم حداقل SDK به 21 برای سازگاری دوربین
           sed -i 's/minSdkVersion = .*/minSdkVersion = 21/' android/app/build.gradle.kts || true
 
       - name: Resolve Dependencies
