@@ -12,12 +12,34 @@ import 'invoice.dart';
 
 const String serverUrl = "https://promaxmobile.ir/api.php";
 
+// لیست پرفروش‌ترین برندهای گوشی بازار ایران به ترتیب محبوبیت
+const List<String> popularBrands = [
+  'اپل (Apple)',
+  'سامسونگ (Samsung)',
+  'شیائومی (Xiaomi)',
+  'پوکو (Poco)',
+  'هواوی (Huawei)',
+  'آنر (Honor)',
+  'نوکیا (Nokia)',
+  'موتورولا (Motorola)',
+  'اینفینیکس (Infinix)',
+  'سایر برندها',
+];
+
+// لیست وضعیت‌های رجیستری شامل «بدون ریجستر»
+const List<String> registryOptions = [
+  'شرکتی با گارانتی',
+  'مسافری',
+  'انجام شد (سفید)',
+  'در انتظار خریدار',
+  'بدون ریجستر',
+];
+
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const PromaxApp());
 }
 
-// فرمت‌دهنده سه‌رقمی مبالغ مالی هنگام تایپ
 class CurrencyInputFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
@@ -78,7 +100,7 @@ class PromaxApp extends StatelessWidget {
   }
 }
 
-// ==================== اسکنر مستقل دوربین (موتور آفلاین ZXing) ====================
+// ==================== اسکنر بدون کرش دوربین ====================
 class CameraScannerScreen extends StatefulWidget {
   const CameraScannerScreen({super.key});
 
@@ -126,9 +148,7 @@ class _CameraScannerScreenState extends State<CameraScannerScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.flash_on),
-            onPressed: () async {
-              await controller?.toggleFlash();
-            },
+            onPressed: () async => await controller?.toggleFlash(),
           ),
         ],
       ),
@@ -151,7 +171,7 @@ class _CameraScannerScreenState extends State<CameraScannerScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(20)),
-              child: const Text("بارکد خطی یا QR جعبه را داخل کادر بگیرید", style: TextStyle(color: Colors.white, fontSize: 12)),
+              child: const Text("بارکد IMEI جعبه را داخل کادر بگیرید", style: TextStyle(color: Colors.white, fontSize: 12)),
             ),
           )
         ],
@@ -211,9 +231,8 @@ class _LoginScreenState extends State<LoginScreen> {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(data['message'])));
       }
-    } catch (e) {
+    } catch (_) {
       setState(() => loading = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("خطا در شبکه: $e")));
     }
   }
 
@@ -252,77 +271,81 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 }
 
-// ساختار هدر و منوی سایدبار کشویی[cite: 2]
-class PromaxScaffold extends StatelessWidget {
-  final String title;
+// ==================== ناوبری اصلی و ساختار یکپارچه ====================
+class MainNavigationScreen extends StatefulWidget {
   final Map<String, dynamic> adminData;
-  final String subtitle;
-  final Widget body;
+  const MainNavigationScreen({super.key, required this.adminData});
 
-  const PromaxScaffold({
-    super.key,
-    required this.title,
-    required this.adminData,
-    required this.subtitle,
-    required this.body,
-  });
+  @override
+  State<MainNavigationScreen> createState() => _MainNavigationScreenState();
+}
+
+class _MainNavigationScreenState extends State<MainNavigationScreen> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  int _currentIndex = 0;
 
   @override
   Widget build(BuildContext context) {
-    final bool isSuperAdmin = adminData['role'] == 'super_admin';
+    final bool isSuperAdmin = widget.adminData['role'] == 'super_admin';
+
+    final pages = [
+      BuyPhoneScreen(adminData: widget.adminData, openDrawer: () => _scaffoldKey.currentState?.openDrawer()),
+      SellPhoneScreen(adminData: widget.adminData, openDrawer: () => _scaffoldKey.currentState?.openDrawer()),
+      InventoryAndReportsScreen(adminData: widget.adminData, openDrawer: () => _scaffoldKey.currentState?.openDrawer()),
+      AccessoriesScreen(adminData: widget.adminData, openDrawer: () => _scaffoldKey.currentState?.openDrawer()),
+    ];
 
     return Scaffold(
+      key: _scaffoldKey,
       drawer: Drawer(
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
             UserAccountsDrawerHeader(
               decoration: const BoxDecoration(color: PromaxColors.headerGradientStart),
-              accountName: Text(adminData['full_name'] ?? 'مدیر'),
-              accountEmail: Text(isSuperAdmin ? 'مدیر کل (Super Admin)' : 'همکار / ادمین'),
+              accountName: Text(widget.adminData['full_name'] ?? 'مدیر'),
+              accountEmail: Text(isSuperAdmin ? 'مدیر ارشد (Super Admin)' : 'همکار فروش / ادمین'),
               currentAccountPicture: CircleAvatar(
                 backgroundColor: PromaxColors.blueAction,
-                child: Text((adminData['full_name'] ?? 'P')[0], style: const TextStyle(color: Colors.white, fontSize: 24)),
+                child: Text((widget.adminData['full_name'] ?? 'P')[0], style: const TextStyle(color: Colors.white, fontSize: 24)),
               ),
             ),
             ListTile(
               leading: const Icon(Icons.manage_accounts_outlined, color: PromaxColors.blueAction),
-              title: const Text("ویرایش مشخصات و رمز عبور"),
+              title: const Text("تغییر نام و رمز عبور"),
               onTap: () {
                 Navigator.pop(context);
-                _showEditProfileDialog(context, adminData);
+                _showEditProfileDialog();
               },
             ),
             if (isSuperAdmin)
               ListTile(
                 leading: const Icon(Icons.person_add_alt_1_outlined, color: PromaxColors.greenAction),
-                title: const Text("افزودن همکار/ادمین جدید"),
-                subtitle: const Text("مخصوص مدیر اصلی", style: TextStyle(fontSize: 11)),
+                title: const Text("افزودن ادمین / همکار جدید"),
+                subtitle: const Text("دسترسی اختصاصی مدیر اصلی", style: TextStyle(fontSize: 11)),
                 onTap: () {
                   Navigator.pop(context);
-                  _showCreateAdminDialog(context, adminData);
+                  _showCreateAdminDialog();
                 },
               ),
             const Divider(),
             ListTile(
               leading: const Icon(Icons.table_chart_outlined, color: Colors.green),
-              title: const Text("دانلود فایل اکسل کامل (Excel / CSV)"),
-              subtitle: const Text("خروجی کلیه دستگاه‌ها، سودها و فروش", style: TextStyle(fontSize: 11)),
+              title: const Text("دانلود گزارش کامل اکسل"),
               onTap: () {
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("جهت دانلود اکسل به آدرس promaxmobile.ir/api.php?action=export_excel در مرورگر مراجعه کنید")),
+                  const SnackBar(content: Text("جهت دانلود به آدرس promaxmobile.ir/api.php?action=export_excel بروید")),
                 );
               },
             ),
             ListTile(
               leading: const Icon(Icons.cloud_download_outlined, color: PromaxColors.blueAction),
-              title: const Text("دانلود پشتیبان دیتابیس (SQL Backup)"),
-              subtitle: const Text("دریافت بک‌آپ کامل اطلاعات پایگاه‌داده", style: TextStyle(fontSize: 11)),
+              title: const Text("دانلود بک‌آپ دیتابیس (SQL)"),
               onTap: () {
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("جهت دانلود بک‌آپ به آدرس promaxmobile.ir/api.php?action=backup_db در مرورگر مراجعه کنید")),
+                  const SnackBar(content: Text("جهت دانلود به آدرس promaxmobile.ir/api.php?action=backup_db بروید")),
                 );
               },
             ),
@@ -335,68 +358,21 @@ class PromaxScaffold extends StatelessWidget {
           ],
         ),
       ),
-      body: Builder(
-        builder: (scaffoldContext) => SafeArea(
-          child: Column(
+      body: pages[_currentIndex],
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -4))],
+        ),
+        child: SafeArea(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(color: PromaxColors.blueAction, borderRadius: BorderRadius.circular(8)),
-                          child: const Icon(Icons.bolt, color: Colors.white, size: 20),
-                        ),
-                        const SizedBox(width: 8),
-                        const Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text("PROMAX", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16, letterSpacing: 1)),
-                            Text("Mobile", style: TextStyle(color: Colors.white70, fontSize: 10)),
-                          ],
-                        ),
-                      ],
-                    ),
-                    IconButton(icon: const Icon(Icons.menu, color: Colors.white), onPressed: () => Scaffold.of(scaffoldContext).openDrawer())
-                  ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-                child: Column(
-                  children: [
-                    RichText(
-                      text: TextSpan(
-                        text: "$title ",
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-                        children: [
-                          TextSpan(text: "(${adminData['full_name']})", style: const TextStyle(color: Color(0xFF60A5FA))),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(subtitle, style: const TextStyle(fontSize: 11, color: Colors.white70)),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-              Expanded(
-                child: Container(
-                  width: double.infinity,
-                  decoration: const BoxDecoration(
-                    color: PromaxColors.cardBackground,
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-                    child: body,
-                  ),
-                ),
-              ),
+              _navItem(icon: Icons.headphones_outlined, label: "لوازم جانبی", index: 3),
+              _navItem(icon: Icons.bar_chart_rounded, label: "گزارشات", index: 2),
+              _navItem(icon: Icons.point_of_sale_rounded, label: "فروش گوشی", index: 1),
+              _navItem(icon: Icons.shopping_cart_outlined, label: "خرید گوشی", index: 0),
             ],
           ),
         ),
@@ -404,9 +380,9 @@ class PromaxScaffold extends StatelessWidget {
     );
   }
 
-  void _showEditProfileDialog(BuildContext context, Map<String, dynamic> admin) {
-    final nameCtl = TextEditingController(text: admin['full_name']);
-    final userCtl = TextEditingController(text: admin['username']);
+  void _showEditProfileDialog() {
+    final nameCtl = TextEditingController(text: widget.adminData['full_name']);
+    final userCtl = TextEditingController(text: widget.adminData['username']);
     final passCtl = TextEditingController();
 
     showDialog(
@@ -429,7 +405,7 @@ class PromaxScaffold extends StatelessWidget {
                 Uri.parse("$serverUrl?action=update_profile"),
                 headers: {"Content-Type": "application/json"},
                 body: jsonEncode({
-                  "admin_id": admin['id'],
+                  "admin_id": widget.adminData['id'],
                   "full_name": nameCtl.text,
                   "username": userCtl.text,
                   "new_password": passCtl.text,
@@ -437,7 +413,7 @@ class PromaxScaffold extends StatelessWidget {
               );
               final d = jsonDecode(res.body);
               if (ctx.mounted) Navigator.pop(ctx);
-              if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(d['message'])));
+              if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(d['message'])));
             },
             child: const Text("ذخیره تغییرات"),
           ),
@@ -446,7 +422,7 @@ class PromaxScaffold extends StatelessWidget {
     );
   }
 
-  void _showCreateAdminDialog(BuildContext context, Map<String, dynamic> admin) {
+  void _showCreateAdminDialog() {
     final nameCtl = TextEditingController();
     final userCtl = TextEditingController();
     final passCtl = TextEditingController();
@@ -454,11 +430,11 @@ class PromaxScaffold extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text("افزودن همکار / ادمین جدید"),
+        title: const Text("افزودن ادمین جدید"),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(controller: nameCtl, decoration: const InputDecoration(labelText: "نام همکار")),
+            TextField(controller: nameCtl, decoration: const InputDecoration(labelText: "نام کامل همکار")),
             TextField(controller: userCtl, decoration: const InputDecoration(labelText: "نام کاربری")),
             TextField(controller: passCtl, decoration: const InputDecoration(labelText: "کلمه عبور")),
           ],
@@ -472,7 +448,7 @@ class PromaxScaffold extends StatelessWidget {
                 Uri.parse("$serverUrl?action=create_admin"),
                 headers: {"Content-Type": "application/json"},
                 body: jsonEncode({
-                  "requester_role": admin['role'],
+                  "requester_role": widget.adminData['role'],
                   "full_name": nameCtl.text,
                   "username": userCtl.text,
                   "password": passCtl.text,
@@ -480,56 +456,11 @@ class PromaxScaffold extends StatelessWidget {
               );
               final d = jsonDecode(res.body);
               if (ctx.mounted) Navigator.pop(ctx);
-              if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(d['message'])));
+              if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(d['message'])));
             },
             child: const Text("ثبت ادمین"),
           ),
         ],
-      ),
-    );
-  }
-}
-
-// ناوبری اصلی برنامه
-class MainNavigationScreen extends StatefulWidget {
-  final Map<String, dynamic> adminData;
-  const MainNavigationScreen({super.key, required this.adminData});
-
-  @override
-  State<MainNavigationScreen> createState() => _MainNavigationScreenState();
-}
-
-class _MainNavigationScreenState extends State<MainNavigationScreen> {
-  int _currentIndex = 0;
-
-  @override
-  Widget build(BuildContext context) {
-    final pages = [
-      BuyPhoneScreen(adminData: widget.adminData),
-      SellPhoneScreen(adminData: widget.adminData),
-      InventoryAndReportsScreen(adminData: widget.adminData),
-      AccessoriesScreen(adminData: widget.adminData),
-    ];
-
-    return Scaffold(
-      body: pages[_currentIndex],
-      bottomNavigationBar: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -4))],
-        ),
-        child: SafeArea(
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _navItem(icon: Icons.headphones_outlined, label: "لوازم جانبی", index: 3),
-              _navItem(icon: Icons.bar_chart_rounded, label: "گزارشات", index: 2),
-              _navItem(icon: Icons.point_of_sale_rounded, label: "فروش کالا", index: 1),
-              _navItem(icon: Icons.shopping_cart_outlined, label: "خرید کالا", index: 0),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -565,10 +496,100 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   }
 }
 
-// ==================== ۱. صفحه خرید کالا ====================
+// ساختار هدر زیبا مطابق طرح[cite: 2]
+class PromaxPageLayout extends StatelessWidget {
+  final String title;
+  final String adminName;
+  final String subtitle;
+  final VoidCallback openDrawer;
+  final Widget body;
+
+  const PromaxPageLayout({
+    super.key,
+    required this.title,
+    required this.adminName,
+    required this.subtitle,
+    required this.openDrawer,
+    required this.body,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(color: PromaxColors.blueAction, borderRadius: BorderRadius.circular(8)),
+                      child: const Icon(Icons.bolt, color: Colors.white, size: 20),
+                    ),
+                    const SizedBox(width: 8),
+                    const Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text("PROMAX", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16, letterSpacing: 1)),
+                        Text("Mobile", style: TextStyle(color: Colors.white70, fontSize: 10)),
+                      ],
+                    ),
+                  ],
+                ),
+                IconButton(
+                  icon: const Icon(Icons.menu, color: Colors.white, size: 28),
+                  onPressed: openDrawer,
+                )
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+            child: Column(
+              children: [
+                RichText(
+                  text: TextSpan(
+                    text: "$title ",
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                    children: [
+                      TextSpan(text: "($adminName)", style: const TextStyle(color: Color(0xFF60A5FA))),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(subtitle, style: const TextStyle(fontSize: 11, color: Colors.white70)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Expanded(
+            child: Container(
+              width: double.infinity,
+              decoration: const BoxDecoration(
+                color: PromaxColors.cardBackground,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+              ),
+              child: ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                child: body,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ==================== ۱. خرید گوشی ====================
 class BuyPhoneScreen extends StatefulWidget {
   final Map<String, dynamic> adminData;
-  const BuyPhoneScreen({super.key, required this.adminData});
+  final VoidCallback openDrawer;
+  const BuyPhoneScreen({super.key, required this.adminData, required this.openDrawer});
 
   @override
   State<BuyPhoneScreen> createState() => _BuyPhoneScreenState();
@@ -576,19 +597,19 @@ class BuyPhoneScreen extends StatefulWidget {
 
 class _BuyPhoneScreenState extends State<BuyPhoneScreen> {
   final imeiCtl = TextEditingController();
-  final brandCtl = TextEditingController();
   final modelCtl = TextEditingController();
   final priceCtl = TextEditingController();
   final nameCtl = TextEditingController();
   final phoneCtl = TextEditingController();
   final nIdCtl = TextEditingController();
   final descCtl = TextEditingController();
-  String registryStatus = 'شرکتی';
+  String selectedBrand = popularBrands[0];
+  String selectedRegistry = registryOptions[0];
   bool hamtaVerified = true;
 
   Future<void> submit() async {
     if (imeiCtl.text.isEmpty || priceCtl.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("IMEI و مبلغ خرید الزامی هستند")));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("شناسه IMEI و مبلغ خرید الزامی هستند")));
       return;
     }
     final cleanPrice = int.parse(priceCtl.text.replaceAll(',', ''));
@@ -598,14 +619,14 @@ class _BuyPhoneScreenState extends State<BuyPhoneScreen> {
       headers: {"Content-Type": "application/json"},
       body: jsonEncode({
         "imei": imeiCtl.text,
-        "brand": brandCtl.text,
+        "brand": selectedBrand,
         "model": modelCtl.text,
         "purchase_price": cleanPrice,
         "customer_name": nameCtl.text,
         "phone_number": phoneCtl.text,
         "national_id": nIdCtl.text,
         "description": descCtl.text,
-        "registry_status": registryStatus,
+        "registry_status": selectedRegistry,
         "hamta_verified": hamtaVerified ? 1 : 0,
         "admin_name": widget.adminData['full_name'],
       }),
@@ -625,7 +646,7 @@ class _BuyPhoneScreenState extends State<BuyPhoneScreen> {
                 personName: nameCtl.text.isEmpty ? "مشتری متفرقه" : nameCtl.text,
                 phone: phoneCtl.text,
                 nationalId: nIdCtl.text,
-                brand: brandCtl.text,
+                brand: selectedBrand,
                 model: modelCtl.text,
                 imei: imeiCtl.text,
                 totalPrice: cleanPrice,
@@ -634,7 +655,7 @@ class _BuyPhoneScreenState extends State<BuyPhoneScreen> {
                 paymentMethod: "نقدی",
                 adminName: widget.adminData['full_name'],
                 description: descCtl.text,
-                registryStatus: registryStatus,
+                registryStatus: selectedRegistry,
                 hamtaVerified: hamtaVerified,
                 isSale: false,
               ),
@@ -649,10 +670,11 @@ class _BuyPhoneScreenState extends State<BuyPhoneScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return PromaxScaffold(
+    return PromaxPageLayout(
       title: "خرید کالای",
-      adminData: widget.adminData,
-      subtitle: "اطلاعات دقیق دستگاه خود را وارد کنید تا استعلام بگیرید.",
+      adminName: widget.adminData['full_name'],
+      subtitle: "اطلاعات دستگاه و استعلام رجیستری همتا",
+      openDrawer: widget.openDrawer,
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
         children: [
@@ -672,21 +694,34 @@ class _BuyPhoneScreenState extends State<BuyPhoneScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          _buildInput(controller: brandCtl, hint: "برند", prefixIcon: Icons.local_offer_outlined),
-          const SizedBox(height: 12),
-          _buildInput(controller: modelCtl, hint: "مدل", prefixIcon: Icons.phone_android_outlined),
-          const SizedBox(height: 12),
-          _buildInput(controller: priceCtl, hint: "مبلغ خرید توافقی (تومان)", prefixIcon: Icons.monetization_on_outlined, isNumber: true),
-          const SizedBox(height: 12),
+          // منوی آبشاری برندهای پرفروش
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14),
             decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: PromaxColors.fieldBorder, width: 1.2)),
             child: DropdownButtonHideUnderline(
               child: DropdownButton<String>(
-                value: registryStatus,
+                value: selectedBrand,
                 isExpanded: true,
-                items: ['شرکتی', 'مسافری', 'انجام شد', 'در انتظار خریدار'].map((m) => DropdownMenuItem(value: m, child: Text("وضعیت رجیستری: $m"))).toList(),
-                onChanged: (v) => setState(() => registryStatus = v!),
+                items: popularBrands.map((b) => DropdownMenuItem(value: b, child: Text("برند: $b", style: const TextStyle(fontSize: 13)))).toList(),
+                onChanged: (v) => setState(() => selectedBrand = v!),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          _buildInput(controller: modelCtl, hint: "مدل (مثلاً 16 Pro Max یا S24 Ultra)", prefixIcon: Icons.phone_android_outlined),
+          const SizedBox(height: 12),
+          _buildInput(controller: priceCtl, hint: "مبلغ خرید توافقی (تومان)", prefixIcon: Icons.monetization_on_outlined, isNumber: true),
+          const SizedBox(height: 12),
+          // منوی آبشاری رجیستری با گزینه بدون ریجستر
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: PromaxColors.fieldBorder, width: 1.2)),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: selectedRegistry,
+                isExpanded: true,
+                items: registryOptions.map((r) => DropdownMenuItem(value: r, child: Text("وضعیت رجیستری: $r", style: const TextStyle(fontSize: 13)))).toList(),
+                onChanged: (v) => setState(() => selectedRegistry = v!),
               ),
             ),
           ),
@@ -704,12 +739,12 @@ class _BuyPhoneScreenState extends State<BuyPhoneScreen> {
           const SizedBox(height: 12),
           _buildInput(controller: nIdCtl, hint: "کد ملی", prefixIcon: Icons.badge_outlined, isNumber: true),
           const SizedBox(height: 12),
-          _buildInput(controller: descCtl, hint: "یادداشت و توضیحات معامله", prefixIcon: Icons.note_alt_outlined),
+          _buildInput(controller: descCtl, hint: "یادداشت و توضیحات اختیاری", prefixIcon: Icons.note_alt_outlined),
           const SizedBox(height: 24),
           ElevatedButton(
             onPressed: submit,
             style: ElevatedButton.styleFrom(backgroundColor: PromaxColors.blueAction, foregroundColor: Colors.white, minimumSize: const Size.fromHeight(54), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24))),
-            child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.save_outlined), SizedBox(width: 8), Text("ثبت در انبار و چاپ رسید خرید", style: TextStyle(fontWeight: FontWeight.bold))]),
+            child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.save_outlined), SizedBox(width: 8), Text("ثبت در انبار و صدور فاکتور", style: TextStyle(fontWeight: FontWeight.bold))]),
           ),
           const SizedBox(height: 20),
         ],
@@ -718,10 +753,11 @@ class _BuyPhoneScreenState extends State<BuyPhoneScreen> {
   }
 }
 
-// ==================== ۲. صفحه فروش کالا ====================
+// ==================== ۲. فروش گوشی ====================
 class SellPhoneScreen extends StatefulWidget {
   final Map<String, dynamic> adminData;
-  const SellPhoneScreen({super.key, required this.adminData});
+  final VoidCallback openDrawer;
+  const SellPhoneScreen({super.key, required this.adminData, required this.openDrawer});
 
   @override
   State<SellPhoneScreen> createState() => _SellPhoneScreenState();
@@ -735,7 +771,7 @@ class _SellPhoneScreenState extends State<SellPhoneScreen> {
   final buyerPhoneCtl = TextEditingController();
   final descCtl = TextEditingController();
   String selectedMethod = 'نقدی';
-  String registryStatus = 'انجام شد';
+  String selectedRegistry = registryOptions[0];
   bool hamtaVerified = true;
 
   int get remaining {
@@ -763,7 +799,7 @@ class _SellPhoneScreenState extends State<SellPhoneScreen> {
         "buyer_name": buyerNameCtl.text.isEmpty ? "مشتری متفرقه" : buyerNameCtl.text,
         "buyer_phone": buyerPhoneCtl.text,
         "description": descCtl.text,
-        "registry_status": registryStatus,
+        "registry_status": selectedRegistry,
         "hamta_verified": hamtaVerified ? 1 : 0,
         "sale_time": "$timeNow - ${now.year}/${now.month}/${now.day}",
         "admin_name": widget.adminData['full_name'],
@@ -793,7 +829,7 @@ class _SellPhoneScreenState extends State<SellPhoneScreen> {
                 paymentMethod: selectedMethod,
                 adminName: widget.adminData['full_name'],
                 description: descCtl.text,
-                registryStatus: registryStatus,
+                registryStatus: selectedRegistry,
                 hamtaVerified: hamtaVerified,
                 isSale: true,
               ),
@@ -808,16 +844,17 @@ class _SellPhoneScreenState extends State<SellPhoneScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return PromaxScaffold(
+    return PromaxPageLayout(
       title: "فروش کالا",
-      adminData: widget.adminData,
-      subtitle: "اطلاعات فروش را به درستی ثبت کنید.",
+      adminName: widget.adminData['full_name'],
+      subtitle: "اطلاعات فروش و انتقال مالکیت دستگاه",
+      openDrawer: widget.openDrawer,
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
         children: [
           Row(
             children: [
-              Expanded(child: _buildInput(controller: imeiCtl, hint: "اسکن با درج IMEI", prefixIcon: Icons.view_week_outlined)),
+              Expanded(child: _buildInput(controller: imeiCtl, hint: "اسکن یا درج IMEI", prefixIcon: Icons.view_week_outlined)),
               const SizedBox(width: 10),
               GestureDetector(
                 onTap: () => openSafeScanner(context, (code) => setState(() => imeiCtl.text = code)),
@@ -838,10 +875,10 @@ class _SellPhoneScreenState extends State<SellPhoneScreen> {
             decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: PromaxColors.fieldBorder, width: 1.2)),
             child: DropdownButtonHideUnderline(
               child: DropdownButton<String>(
-                value: registryStatus,
+                value: selectedRegistry,
                 isExpanded: true,
-                items: ['انجام شد', 'در انتظار خریدار', 'شرکتی', 'مسافری'].map((m) => DropdownMenuItem(value: m, child: Text("انتقال مالکیت: $m"))).toList(),
-                onChanged: (v) => setState(() => registryStatus = v!),
+                items: registryOptions.map((r) => DropdownMenuItem(value: r, child: Text("انتقال مالکیت / رجیستری: $r", style: const TextStyle(fontSize: 13)))).toList(),
+                onChanged: (v) => setState(() => selectedRegistry = v!),
               ),
             ),
           ),
@@ -860,7 +897,7 @@ class _SellPhoneScreenState extends State<SellPhoneScreen> {
               child: DropdownButton<String>(
                 value: selectedMethod,
                 isExpanded: true,
-                items: ['نقدی', 'قسطی', 'چکی', 'قرضی'].map((m) => DropdownMenuItem(value: m, child: Text("روش تسویه: $m"))).toList(),
+                items: ['نقدی', 'قسطی', 'چکی', 'قرضی'].map((m) => DropdownMenuItem(value: m, child: Text("روش تسویه: $m", style: const TextStyle(fontSize: 13)))).toList(),
                 onChanged: (v) => setState(() => selectedMethod = v!),
               ),
             ),
@@ -898,10 +935,11 @@ class _SellPhoneScreenState extends State<SellPhoneScreen> {
   }
 }
 
-// ==================== ۳. صفحه گزارشات و انبار گوشی ====================
+// ==================== ۳. گزارشات و محاسبه سود با فیلترهای زمانی ====================
 class InventoryAndReportsScreen extends StatefulWidget {
   final Map<String, dynamic> adminData;
-  const InventoryAndReportsScreen({super.key, required this.adminData});
+  final VoidCallback openDrawer;
+  const InventoryAndReportsScreen({super.key, required this.adminData, required this.openDrawer});
 
   @override
   State<InventoryAndReportsScreen> createState() => _InventoryAndReportsScreenState();
@@ -911,6 +949,7 @@ class _InventoryAndReportsScreenState extends State<InventoryAndReportsScreen> {
   Map<String, dynamic>? summary;
   List<dynamic> allPhones = [];
   String searchQuery = "";
+  String selectedPeriod = 'today'; // today, week, month, 3months, 6months, year
   bool loading = true;
 
   @override
@@ -922,7 +961,7 @@ class _InventoryAndReportsScreenState extends State<InventoryAndReportsScreen> {
   Future<void> load() async {
     setState(() => loading = true);
     try {
-      final resSum = await http.get(Uri.parse("$serverUrl?action=get_summary"));
+      final resSum = await http.get(Uri.parse("$serverUrl?action=get_summary&period=$selectedPeriod"));
       final resPhones = await http.get(Uri.parse("$serverUrl?action=get_all_phones"));
       if (resSum.statusCode == 200 && resPhones.statusCode == 200) {
         setState(() {
@@ -936,137 +975,28 @@ class _InventoryAndReportsScreenState extends State<InventoryAndReportsScreen> {
     }
   }
 
-  void _showWarrantyActionDialog(Map<String, dynamic> item) {
-    final reasonCtl = TextEditingController();
-    final discountCtl = TextEditingController();
-    String selectedAction = 'return';
-
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text("مدیریت مهلت تست ۳۰ روزه"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              RadioListTile<String>(
-                title: const Text("پس گرفته شده (مرجوع به انبار)"),
-                value: 'return',
-                groupValue: selectedAction,
-                onChanged: (v) => setDialogState(() => selectedAction = v!),
-              ),
-              RadioListTile<String>(
-                title: const Text("تخفیف داده شده بدلیل مشکل در محصول"),
-                value: 'defect_discount',
-                groupValue: selectedAction,
-                onChanged: (v) => setDialogState(() => selectedAction = v!),
-              ),
-              if (selectedAction == 'defect_discount')
-                TextField(
-                  controller: discountCtl,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly, CurrencyInputFormatter()],
-                  decoration: const InputDecoration(labelText: "مبلغ تخفیف نقص فنی (تومان)"),
-                ),
-              TextField(controller: reasonCtl, decoration: const InputDecoration(labelText: "دلیل / ایراد فنی اعلام‌شده")),
-            ],
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("انصراف")),
-            FilledButton(
-              onPressed: () async {
-                final res = await http.post(
-                  Uri.parse("$serverUrl?action=handle_warranty_action"),
-                  headers: {"Content-Type": "application/json"},
-                  body: jsonEncode({
-                    "phone_id": item['id'],
-                    "type": selectedAction,
-                    "reason": reasonCtl.text,
-                    "discount_amount": int.tryParse(discountCtl.text.replaceAll(',', '')) ?? 0,
-                  }),
-                );
-                final d = jsonDecode(res.body);
-                if (ctx.mounted) Navigator.pop(ctx);
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(d['message'])));
-                  load();
-                }
-              },
-              child: const Text("ثبت تغییرات مهلت تست"),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void showDetailsModal(Map<String, dynamic> item) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        padding: const EdgeInsets.all(24),
-        decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text("${item['brand']} ${item['model']}", style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
-                Chip(
-                  label: Text(item['status'] == 'IN_STOCK' ? 'موجود' : 'فروخته‌شده', style: const TextStyle(fontSize: 11)),
-                  backgroundColor: item['status'] == 'IN_STOCK' ? const Color(0xFFDCFCE7) : Colors.grey.shade200,
-                ),
-              ],
-            ),
-            const Divider(height: 20),
-            Text("سریال IMEI: ${item['imei']}", style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 6),
-            Text("قیمت خرید: ${formatToman(item['purchase_price'])} تومان"),
-            Text("فروشنده: ${item['seller_name'] ?? 'نامشخص'} (${item['seller_phone'] ?? '-'})"),
-            Text("متصدی ثبت خرید: ${item['created_by_admin'] ?? 'مدیر'}"),
-            if (item['description'] != null && item['description'].toString().isNotEmpty)
-              Text("توضیحات: ${item['description']}", style: const TextStyle(color: PromaxColors.blueAction)),
-            if (item['status'] == 'SOLD') ...[
-              const Divider(height: 20),
-              Text("قیمت فروش: ${formatToman(item['sale_price'])} تومان"),
-              Text("سود حاصله: ${formatToman(item['profit'])} تومان", style: const TextStyle(color: PromaxColors.greenAction, fontWeight: FontWeight.bold)),
-              Text("روش پرداخت: ${item['payment_method']}"),
-              Text("مبلغ دریافتی: ${formatToman(item['paid_amount'])} تومان"),
-              Text("مانده طلب: ${formatToman(item['remaining_amount'])} تومان", style: const TextStyle(color: PromaxColors.alertText, fontWeight: FontWeight.bold)),
-              Text("خریدار: ${item['buyer_name']} (${item['buyer_phone']})"),
-              Text("زمان فروش: ${item['sale_time'] ?? item['sale_date']}"),
-              if (item['return_status'] != 'عادی') ...[
-                const SizedBox(height: 6),
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(color: Colors.amber.shade100, borderRadius: BorderRadius.circular(8)),
-                  child: Text("وضعیت مهلت تست: ${item['return_status']} - دلیل: ${item['return_reason'] ?? ''}", style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                ),
-              ],
-              const SizedBox(height: 12),
-              OutlinedButton.icon(
-                icon: const Icon(Icons.published_with_changes),
-                label: const Text("ویرایش مهلت تست تا ۱ ماه (مرجوعی / تخفیف عیب)"),
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  _showWarrantyActionDialog(item);
-                },
-              ),
-            ],
-            const SizedBox(height: 20),
-          ],
-        ),
-      ),
-    );
+  String getPeriodLabel(String key) {
+    switch (key) {
+      case 'today':
+        return 'امروز';
+      case 'week':
+        return 'هفتگی (۷ روز)';
+      case 'month':
+        return 'ماهانه (۳۰ روز)';
+      case '3months':
+        return 'سه ماهه';
+      case '6months':
+        return 'شش ماهه';
+      case 'year':
+        return 'یکساله';
+      default:
+        return 'امروز';
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (loading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (loading) return const Center(child: CircularProgressIndicator());
 
     final filtered = allPhones.where((item) {
       final q = searchQuery.toLowerCase();
@@ -1077,15 +1007,39 @@ class _InventoryAndReportsScreenState extends State<InventoryAndReportsScreen> {
           (item['buyer_name']?.toString().toLowerCase().contains(q) ?? false);
     }).toList();
 
-    return PromaxScaffold(
+    return PromaxPageLayout(
       title: "گزارشات و انبار",
-      adminData: widget.adminData,
-      subtitle: "خلاصه سودآوری، آمار انبار و مطالبات فروشگاه",
+      adminName: widget.adminData['full_name'],
+      subtitle: "محاسبه دقیق سود در بازه‌های زمانی دلخواه",
+      openDrawer: widget.openDrawer,
       body: RefreshIndicator(
         onRefresh: load,
         child: ListView(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
           children: [
+            // انتخاب بازه زمانی
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: ['today', 'week', 'month', '3months', '6months', 'year'].map((p) {
+                  final isSel = selectedPeriod == p;
+                  return Padding(
+                    padding: const EdgeInsets.only(left: 6),
+                    child: ChoiceChip(
+                      label: Text(getPeriodLabel(p), style: TextStyle(fontSize: 11, color: isSel ? Colors.white : Colors.black87)),
+                      selected: isSel,
+                      selectedColor: PromaxColors.blueAction,
+                      onSelected: (_) {
+                        setState(() => selectedPeriod = p);
+                        load();
+                      },
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            // کارت سود بر اساس بازه انتخابی
             Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
@@ -1097,8 +1051,8 @@ class _InventoryAndReportsScreenState extends State<InventoryAndReportsScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text("سود امروز (کل): ${formatToman(summary?['today_profit'])} تومان", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-                      Text("سود ماه: ${formatToman(summary?['month_profit'])} ت", style: const TextStyle(color: Colors.white70, fontSize: 11)),
+                      Text("سود بازه (${getPeriodLabel(selectedPeriod)}):", style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                      Text("${formatToman(summary?['selected_profit'])} تومان", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
                     ],
                   ),
                   const Divider(color: Colors.white24, height: 20),
@@ -1106,7 +1060,7 @@ class _InventoryAndReportsScreenState extends State<InventoryAndReportsScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text("موجودی: ${summary?['stock_count']} دستگاه", style: const TextStyle(color: Colors.white, fontSize: 12)),
-                      Text("کل مطالبات: ${formatToman(summary?['total_debt'])} ت", style: const TextStyle(color: Color(0xFFFDE047), fontWeight: FontWeight.bold, fontSize: 12)),
+                      Text("کل طلب/مانده: ${formatToman(summary?['total_debt'])} ت", style: const TextStyle(color: Color(0xFFFDE047), fontWeight: FontWeight.bold, fontSize: 12)),
                     ],
                   ),
                 ],
@@ -1129,10 +1083,9 @@ class _InventoryAndReportsScreenState extends State<InventoryAndReportsScreen> {
                   margin: const EdgeInsets.only(bottom: 10),
                   decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: PromaxColors.fieldBorder)),
                   child: ListTile(
-                    onTap: () => showDetailsModal(item),
                     leading: Icon(item['status'] == 'IN_STOCK' ? Icons.phone_android_rounded : Icons.check_circle_outline, color: item['status'] == 'IN_STOCK' ? PromaxColors.blueAction : Colors.grey),
                     title: Text("${item['brand']} ${item['model']}", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                    subtitle: Text("IMEI: ${item['imei']}\nطرف حساب: ${item['status'] == 'IN_STOCK' ? (item['seller_name'] ?? 'متفرقه') : (item['buyer_name'] ?? 'متفرقه')}", style: const TextStyle(fontSize: 10.5, color: PromaxColors.textMuted)),
+                    subtitle: Text("IMEI: ${item['imei']}\nوضعیت رجیستری: ${item['registry_status']}", style: const TextStyle(fontSize: 10.5, color: PromaxColors.textMuted)),
                     trailing: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.end,
@@ -1150,10 +1103,11 @@ class _InventoryAndReportsScreenState extends State<InventoryAndReportsScreen> {
   }
 }
 
-// ==================== ۴. بخش لوازم جانبی (اکسسوری) ====================
+// ==================== ۴. بخش پایدار لوازم جانبی (بدون کرش) ====================
 class AccessoriesScreen extends StatefulWidget {
   final Map<String, dynamic> adminData;
-  const AccessoriesScreen({super.key, required this.adminData});
+  final VoidCallback openDrawer;
+  const AccessoriesScreen({super.key, required this.adminData, required this.openDrawer});
 
   @override
   State<AccessoriesScreen> createState() => _AccessoriesScreenState();
@@ -1174,17 +1128,22 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
     try {
       final res = await http.get(Uri.parse("$serverUrl?action=get_accessories"));
       if (res.statusCode == 200) {
-        setState(() {
-          accessories = jsonDecode(res.body)['data'];
-          loading = false;
-        });
+        final data = jsonDecode(res.body);
+        if (data != null && data['data'] != null && data['data'] is List) {
+          setState(() {
+            accessories = data['data'];
+            loading = false;
+          });
+          return;
+        }
       }
+      setState(() => loading = false);
     } catch (_) {
       setState(() => loading = false);
     }
   }
 
-  void _showAddAccessoryDialog() {
+  void _showAddDialog() {
     final nameCtl = TextEditingController();
     final catCtl = TextEditingController(text: "قاب و گلس");
     final stockCtl = TextEditingController();
@@ -1280,17 +1239,18 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return PromaxScaffold(
+    return PromaxPageLayout(
       title: "لوازم جانبی و اکسسوری",
-      adminData: widget.adminData,
-      subtitle: "مدیریت قاب، گلس، شارژر و کالاهای تعدادی بدون IMEI",
+      adminName: widget.adminData['full_name'],
+      subtitle: "مدیریت قاب، گلس، شارژر و کالاهای بدون IMEI",
+      openDrawer: widget.openDrawer,
       body: RefreshIndicator(
         onRefresh: load,
         child: ListView(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           children: [
             FilledButton.icon(
-              onPressed: _showAddAccessoryDialog,
+              onPressed: _showAddDialog,
               icon: const Icon(Icons.add),
               label: const Text("افزودن کالای جانبی جدید به انبار"),
               style: FilledButton.styleFrom(backgroundColor: PromaxColors.blueAction, minimumSize: const Size.fromHeight(48)),
@@ -1299,22 +1259,25 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
             if (loading)
               const Center(child: CircularProgressIndicator())
             else if (accessories.isEmpty)
-              const Center(child: Padding(padding: EdgeInsets.all(20), child: Text("هیچ کالای جانبی در انبار موجود نیست")))
+              const Center(child: Padding(padding: EdgeInsets.all(20), child: Text("هیچ کالای جانبی در انبار ثبت نشده است")))
             else
-              ...accessories.map((item) => Card(
-                    margin: const EdgeInsets.only(bottom: 10),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    child: ListTile(
-                      leading: const CircleAvatar(backgroundColor: Color(0xFFEFF6FF), child: Icon(Icons.headphones, color: PromaxColors.blueAction)),
-                      title: Text(item['name'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                      subtitle: Text("موجودی: ${item['stock']} عدد | قیمت فروش: ${formatToman(item['sale_price'])} ت", style: const TextStyle(fontSize: 11)),
-                      trailing: ElevatedButton(
-                        onPressed: item['stock'] > 0 ? () => _showSellDialog(item) : null,
-                        style: ElevatedButton.styleFrom(backgroundColor: PromaxColors.greenAction, foregroundColor: Colors.white),
-                        child: const Text("فروش"),
-                      ),
+              ...accessories.map((item) {
+                final currentStock = int.tryParse(item['stock'].toString()) ?? 0;
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  child: ListTile(
+                    leading: const CircleAvatar(backgroundColor: Color(0xFFEFF6FF), child: Icon(Icons.headphones, color: PromaxColors.blueAction)),
+                    title: Text(item['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    subtitle: Text("موجودی: $currentStock عدد | فروش: ${formatToman(item['sale_price'])} ت", style: const TextStyle(fontSize: 11)),
+                    trailing: ElevatedButton(
+                      onPressed: currentStock > 0 ? () => _showSellDialog(item) : null,
+                      style: ElevatedButton.styleFrom(backgroundColor: PromaxColors.greenAction, foregroundColor: Colors.white),
+                      child: const Text("فروش"),
                     ),
-                  )),
+                  ),
+                );
+              }),
           ],
         ),
       ),
@@ -1322,7 +1285,6 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
   }
 }
 
-// ساخت فیلدهای ورودی گرد منطبق با طرح[cite: 2]
 Widget _buildInput({
   required TextEditingController controller,
   required String hint,
