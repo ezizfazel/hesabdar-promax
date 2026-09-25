@@ -7,7 +7,7 @@ import 'package:printing/printing.dart';
 import 'invoice.dart';
 
 // آدرس وب‌سرویس هاست شما
-const String serverUrl = "https://yourdomain.ir/api.php";
+const String serverUrl = "https://promaxmobile.ir/api.php";
 
 void main() {
   runApp(const PromaxApp());
