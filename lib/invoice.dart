@@ -19,6 +19,8 @@ class InvoiceHelper {
     required String paymentMethod,
     required String adminName,
     required String description,
+    required String registryStatus,
+    required bool hamtaVerified,
     required bool isSale,
   }) async {
     final pdf = pw.Document();
@@ -48,7 +50,7 @@ class InvoiceHelper {
                     children: [
                       pw.Text("فروشگاه موبایل پرومکس ($title)", style: pw.TextStyle(fontSize: 15, fontWeight: pw.FontWeight.bold, color: PdfColor.fromHex("#0F4C81"))),
                       pw.SizedBox(height: 2),
-                      pw.Text("سامانه هوشمند صدور فاکتور و مبایعه‌نامه", style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
+                      pw.Text("سامانه هوشمند صدور فاکتور و مبایعه‌نامه معتبر", style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
                     ],
                   ),
                   pw.Text("تاریخ: ${now.year}/${now.month}/${now.day}", style: const pw.TextStyle(fontSize: 10)),
@@ -79,6 +81,19 @@ class InvoiceHelper {
                 ],
               ),
               pw.SizedBox(height: 10),
+              // بخش سامانه همتا و رجیستری
+              pw.Container(
+                padding: const pw.EdgeInsets.all(8),
+                decoration: pw.BoxDecoration(color: PdfColors.blue50, border: pw.Border.all(color: PdfColor.fromHex("#0F4C81"))),
+                child: pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text("وضعیت انتقال مالکیت / رجیستری: $registryStatus", style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
+                    pw.Text(hamtaVerified ? "☑ تست اصالت و رجیستری سامانه همتا انجام شد" : "☐ در انتظار استعلام نهایی همتا", style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10, color: hamtaVerified ? PdfColors.green800 : PdfColors.red800)),
+                  ],
+                ),
+              ),
+              pw.SizedBox(height: 10),
               if (isSale)
                 pw.Container(
                   padding: const pw.EdgeInsets.all(8),
@@ -106,8 +121,8 @@ class InvoiceHelper {
                 decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColors.grey300)),
                 child: pw.Text(
                   isSale
-                      ? "این برگه به منزله فاکتور رسمی تحویل دستگاه بوده و خریدار محترم با مشخصات فوق موظف به تسویه الباقی مانده بدهی در موعد مقرر می‌باشد."
-                      : "فروشنده با امضای این سند تصریح می‌نماید که دستگاه فوق با شناسه IMEI ثبت‌شده متعلق به شخص وی بوده و فاقد هرگونه منع رجیستری یا گزارش سرقت می‌باشد.",
+                      ? "این برگه به منزله فاکتور معتبر تحویل دستگاه بوده و وضعیت رجیستری و اصالت دستگاه طبق مفاد فوق به تایید طرفین رسیده است."
+                      : "فروشنده اقرار می‌نماید که دستگاه متعلق به وی بوده و مسئولیت هرگونه مغایرت مالکیتی یا رجیستری در سامانه همتا مستقیماً بر عهده وی می‌باشد.",
                   textAlign: pw.TextAlign.justify,
                   style: const pw.TextStyle(fontSize: 8.5),
                 ),
@@ -116,7 +131,7 @@ class InvoiceHelper {
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
                 children: [
-                  pw.Text("امضا و اثر انگشت طرف اول"),
+                  pw.Text("امضا و اثر انگشت خریدار / فروشنده"),
                   pw.Text("مهر و امضای فروشگاه پرومکس"),
                 ],
               ),
