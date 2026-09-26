@@ -42,7 +42,7 @@ class InvoiceHelper {
         build: (pw.Context ctx) => pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.stretch,
           children: [
-            // ۱. هدر بالای فاکتور
+            // هدر بالای فاکتور
             pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
@@ -74,7 +74,7 @@ class InvoiceHelper {
             ),
             pw.SizedBox(height: 12),
 
-            // ۲. کادر مشخصات طرف حساب
+            // کادر مشخصات طرف حساب
             pw.Container(
               padding: const pw.EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: pw.BoxDecoration(
@@ -94,7 +94,7 @@ class InvoiceHelper {
             ),
             pw.SizedBox(height: 12),
 
-            // ۳. جدول اقلام کالا
+            // جدول اقلام کالا
             pw.Table(
               border: pw.TableBorder.all(color: PdfColors.grey300),
               children: [
@@ -123,7 +123,7 @@ class InvoiceHelper {
             ),
             pw.SizedBox(height: 12),
 
-            // ۴. کارت وضعیت پرداخت و جمع کل فاکتور (با pw.Expanded تصحیح‌شده)
+            // کارت وضعیت پرداخت و جمع کل فاکتور
             pw.Row(
               children: [
                 pw.Expanded(
@@ -177,7 +177,7 @@ class InvoiceHelper {
 
             pw.Spacer(),
 
-            // ۵. فوتر، QR Code استعلام و مهر و امضا
+            // فوتر، بارکد QR و امضاها
             pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
@@ -186,7 +186,7 @@ class InvoiceHelper {
                     pw.BarcodeWidget(data: "https://promaxmobile.ir/verify?imei=$imei", barcode: pw.Barcode.qrCode(), width: 44, height: 44),
                     pw.SizedBox(width: 8),
                     pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         pw.Text("اسکن کد QR", style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8.5)),
                         pw.Text("جهت استعلام اصالت فاکتور و رجیستری", style: const pw.TextStyle(fontSize: 7.5, color: PdfColors.grey700)),
