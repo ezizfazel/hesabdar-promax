@@ -136,7 +136,7 @@ class PromaxSkeletonLoading extends StatelessWidget {
   }
 }
 
-// ویجت پایه و ساختار کلی سربرگ برای تمامی صفحات
+// ساختار هدر یکپارچه برای تمامی صفحات
 class PromaxPageLayout extends StatelessWidget {
   final String title;
   final String adminName;
@@ -533,10 +533,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           FilledButton.icon(
             onPressed: () {
               Navigator.pop(ctx);
-              Printing.sharePdf(bytes: Uint8List(0), filename: directUrl);
+              Clipboard.setData(ClipboardData(text: directUrl));
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("لینک مستقیم دانلود کپی شد")));
             },
-            icon: const Icon(Icons.file_download),
-            label: const Text("دریافت مستقیم فایل"),
+            icon: const Icon(Icons.copy_rounded),
+            label: const Text("کپی لینک دانلود"),
           ),
         ],
       ),
@@ -1892,7 +1893,7 @@ class _SellPhoneScreenState extends State<SellPhoneScreen> {
               child: DropdownButton<String>(
                 value: selectedMethod,
                 isExpanded: true,
-                items: ['نقدی', 'قسطی', 'چکی', 'قرضی'].map((m) => DropdownMenuItem(value: r, child: Text("روش تسویه: $m", style: const TextStyle(fontSize: 13)))).toList(),
+                items: ['نقدی', 'قسطی', 'چکی', 'قرضی'].map((m) => DropdownMenuItem(value: m, child: Text("روش تسویه: $m", style: const TextStyle(fontSize: 13)))).toList(),
                 onChanged: (v) => setState(() => selectedMethod = v!),
               ),
             ),
