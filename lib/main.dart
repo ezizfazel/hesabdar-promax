@@ -136,7 +136,7 @@ class PromaxSkeletonLoading extends StatelessWidget {
   }
 }
 
-// ==================== اسکنر مستقل دوربین ====================
+// ==================== اسکنر بارکد ====================
 class CameraScannerScreen extends StatefulWidget {
   const CameraScannerScreen({super.key});
 
@@ -206,7 +206,7 @@ Future<void> openSafeScanner(BuildContext context, Function(String) onFound) asy
   if (result != null && result is String) onFound(result);
 }
 
-// ==================== صفحه لاگین با اثر انگشت ====================
+// ==================== صفحه ورود ====================
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -347,7 +347,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 }
 
-// ==================== ناوبری اصلی همراه با ۵ تب ====================
+// ==================== ناوبری اصلی (۵ تب جامع) ====================
 class MainNavigationScreen extends StatefulWidget {
   final Map<String, dynamic> adminData;
   const MainNavigationScreen({super.key, required this.adminData});
@@ -714,124 +714,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   }
 }
 
-// ساختار هدر یکپارچه
-class PromaxPageLayout extends StatelessWidget {
-  final String title;
-  final String adminName;
-  final String subtitle;
-  final VoidCallback openDrawer;
-  final VoidCallback onNotificationTap;
-  final VoidCallback onSecurityTap;
-  final int notificationCount;
-  final Widget body;
-
-  const PromaxPageLayout({
-    super.key,
-    required this.title,
-    required this.adminName,
-    required this.subtitle,
-    required this.openDrawer,
-    required this.onNotificationTap,
-    required this.onSecurityTap,
-    required this.notificationCount,
-    required this.body,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)]), borderRadius: BorderRadius.circular(12)),
-                      child: const Icon(Icons.bolt_rounded, color: Colors.white, size: 22),
-                    ),
-                    const SizedBox(width: 10),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text("PROMAX", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 17, letterSpacing: 1.5)),
-                        Text("v$appVersion | by $developerName", style: const TextStyle(color: Color(0xFF93C5FD), fontSize: 9.5, fontWeight: FontWeight.bold)),
-                      ],
-                    ),
-                  ],
-                ),
-                Row(
-                  children: [
-                    GestureDetector(
-                      onTap: onSecurityTap,
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(color: Colors.white.withOpacity(0.12), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white24)),
-                        child: const Icon(Icons.security_rounded, color: Colors.white, size: 22),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    GestureDetector(
-                      onTap: onNotificationTap,
-                      child: Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(color: Colors.white.withOpacity(0.12), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white24)),
-                            child: const Icon(Icons.notifications_none_rounded, color: Colors.white, size: 22),
-                          ),
-                          if (notificationCount > 0)
-                            Positioned(
-                              top: -4, right: -4,
-                              child: Container(padding: const EdgeInsets.all(4), decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle), child: Text("$notificationCount", style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold))),
-                            ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    GestureDetector(
-                      onTap: openDrawer,
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(color: Colors.white.withOpacity(0.12), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white24)),
-                        child: const Icon(Icons.menu_rounded, color: Colors.white, size: 24),
-                      ),
-                    ),
-                  ],
-                )
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-            child: Column(
-              children: [
-                RichText(text: TextSpan(text: "$title ", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white), children: [TextSpan(text: "($adminName)", style: const TextStyle(color: Color(0xFF60A5FA)))])),
-                const SizedBox(height: 4),
-                Text(subtitle, style: const TextStyle(fontSize: 11, color: Colors.white70)),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          Expanded(
-            child: Container(
-              width: double.infinity,
-              decoration: const BoxDecoration(color: PromaxColors.cardBackground, borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
-              child: ClipRRect(borderRadius: const BorderRadius.vertical(top: Radius.circular(32)), child: body),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ==================== داشبورد آمار و تحلیل مالی (مطابق تصویر) ====================
+// ==================== داشبورد آمار و تحلیل مالی ====================
 class AnalyticsDashboardScreen extends StatefulWidget {
   final Map<String, dynamic> adminData;
   final VoidCallback openDrawer;
@@ -973,7 +856,8 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
           children: [
             Expanded(child: _kpiCard(title: "کل فروش", value: formatToman(sales), subtitle: "+۲۴٪ نسبت به ماه قبل", subtitleColor: PromaxColors.greenAction, icon: Icons.point_of_sale_rounded, iconColor: Colors.blue.shade600, iconBg: Colors.blue.shade50)),
             const SizedBox(width: 10),
-            Expanded(child: _kpiCard(title: "کل سود", value: formatToman(profit), subtitle: "+۱۸٪ نسبت به قبل", subtitleColor: PromaxColors.greenAction, icon: Icons.account_balance_wallet_rounded, iconColor: Colors.emerald.shade700, iconBg: Colors.emerald.shade50)),
+            // استفاده از رنگ استاندارد green به جای emerald که وجود نداشت
+            Expanded(child: _kpiCard(title: "کل سود", value: formatToman(profit), subtitle: "+۱۸٪ نسبت به قبل", subtitleColor: PromaxColors.greenAction, icon: Icons.account_balance_wallet_rounded, iconColor: Colors.green.shade700, iconBg: Colors.green.shade50)),
           ],
         ),
       ],
@@ -1489,7 +1373,7 @@ class DonutChartPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-// ==================== ۱. صفحه خرید گوشی ====================
+// ==================== صفحه خرید گوشی ====================
 class BuyPhoneScreen extends StatefulWidget {
   final Map<String, dynamic> adminData;
   final VoidCallback openDrawer;
@@ -1684,7 +1568,7 @@ class _BuyPhoneScreenState extends State<BuyPhoneScreen> {
   }
 }
 
-// ==================== ۲. فروش گوشی ====================
+// ==================== ۲. صفحه فروش گوشی ====================
 class SellPhoneScreen extends StatefulWidget {
   final Map<String, dynamic> adminData;
   final VoidCallback openDrawer;
@@ -1944,7 +1828,7 @@ class _SellPhoneScreenState extends State<SellPhoneScreen> {
   }
 }
 
-// ==================== ۳. گزارشات و انبار ====================
+// ==================== ۳. صفحه گزارشات و انبار ====================
 class InventoryAndReportsScreen extends StatefulWidget {
   final Map<String, dynamic> adminData;
   final VoidCallback openDrawer;
@@ -1984,18 +1868,6 @@ class _InventoryAndReportsScreenState extends State<InventoryAndReportsScreen> {
       }
     } catch (_) {
       setState(() => loading = false);
-    }
-  }
-
-  String getPeriodLabel(String key) {
-    switch (key) {
-      case 'today': return 'امروز';
-      case 'week': return 'هفتگی (۷ روز)';
-      case 'month': return 'ماهانه (۳۰ روز)';
-      case '3months': return 'سه ماهه';
-      case '6months': return 'شش ماهه';
-      case 'year': return 'یکساله';
-      default: return 'امروز';
     }
   }
 
@@ -2406,7 +2278,7 @@ class _InventoryAndReportsScreenState extends State<InventoryAndReportsScreen> {
   }
 }
 
-// ==================== ۴. لوازم جانبی ====================
+// ==================== ۴. صفحه لوازم جانبی ====================
 class AccessoriesScreen extends StatefulWidget {
   final Map<String, dynamic> adminData;
   final VoidCallback openDrawer;
@@ -2555,7 +2427,7 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
           : RefreshIndicator(
               onRefresh: load,
               child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                padding: const EdgeInsets.all(20),
                 children: [
                   FilledButton.icon(
                     onPressed: _showAddDialog,
