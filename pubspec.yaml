@@ -1,7 +1,7 @@
 name: hesabdar_promax
 description: نرم افزار حسابدار پرومکس
 publish_to: 'none'
-version: 1.0.0+4
+version: 1.6.0+1
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -17,8 +17,9 @@ dependencies:
   pdf: ^3.10.8
   printing: ^5.13.0
   shamsi_date: ^1.0.1
-  local_auth: ^2.3.0        # برای اثر انگشت و بیومتریک
-  flutter_secure_storage: ^9.0.0 # برای ذخیره امن رمز عبو
+  local_auth: ^2.3.0
+  flutter_secure_storage: ^9.0.0
+  shimmer: ^3.0.0
 
 flutter:
   uses-material-design: true
