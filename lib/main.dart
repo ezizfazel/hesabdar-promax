@@ -13,7 +13,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'invoice.dart';
 
 const String serverUrl = "https://promaxmobile.ir/api.php";
-const String appVersion = "1.4.0";
+const String appVersion = "1.5.0";
 const String developerName = "ezizfd";
 
 const List<String> popularBrands = [
@@ -182,7 +182,7 @@ Future<void> openSafeScanner(BuildContext context, Function(String) onFound) asy
   if (result != null && result is String) onFound(result);
 }
 
-// ==================== صفحه ورود با بیومتریک ====================
+// ==================== صفحه ورود با بیومتریک و ذخیره‌سازی ====================
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -201,8 +201,20 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void initState() {
     super.initState();
+    _loadSavedCredentials();
     _checkBiometricSupport();
-    _tryAutoBiometricLogin();
+  }
+
+  Future<void> _loadSavedCredentials() async {
+    final savedUser = await storage.read(key: 'promax_user');
+    final savedPass = await storage.read(key: 'promax_pass');
+    if (savedUser != null && savedPass != null) {
+      setState(() {
+        userCtl.text = savedUser;
+        passCtl.text = savedPass;
+      });
+      _tryAutoBiometricLogin();
+    }
   }
 
   Future<void> _checkBiometricSupport() async {
@@ -223,8 +235,6 @@ class _LoginScreenState extends State<LoginScreen> {
           options: const AuthenticationOptions(biometricOnly: true),
         );
         if (authenticated) {
-          userCtl.text = savedUser;
-          passCtl.text = savedPass;
           login();
         }
       } catch (_) {}
@@ -242,8 +252,10 @@ class _LoginScreenState extends State<LoginScreen> {
       final data = jsonDecode(res.body);
       setState(() => loading = false);
       if (data['status'] == 'success') {
+        // ذخیره قطعی مشخصات ورود برای اثر انگشت
         await storage.write(key: 'promax_user', value: userCtl.text.trim());
         await storage.write(key: 'promax_pass', value: passCtl.text.trim());
+
         if (!mounted) return;
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => MainNavigationScreen(adminData: data['admin'])));
       } else {
@@ -269,7 +281,7 @@ class _LoginScreenState extends State<LoginScreen> {
           passCtl.text = savedPass;
           login();
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("ابتدا یک‌بار با نام کاربری وارد شوید")));
+          login();
         }
       }
     } catch (e) {
@@ -302,10 +314,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                   Container(
                     padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: PromaxColors.blueAction.withOpacity(0.1),
-                      shape: BoxShape.circle,
-                    ),
+                    decoration: BoxDecoration(color: PromaxColors.blueAction.withOpacity(0.1), shape: BoxShape.circle),
                     child: const Icon(Icons.phone_android_rounded, size: 54, color: PromaxColors.blueAction),
                   ),
                   const SizedBox(height: 12),
@@ -340,7 +349,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 }
 
-// ==================== ناوبری اصلی و سایدبار ====================
+// ==================== ناوبری اصلی ====================
 class MainNavigationScreen extends StatefulWidget {
   final Map<String, dynamic> adminData;
   const MainNavigationScreen({super.key, required this.adminData});
@@ -481,10 +490,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 children: [
                   _drawerTile(icon: Icons.notifications_active_outlined, color: Colors.orange, title: "اعلان‌های هوشمند", subtitle: "${notifications.length} یادآوری", onTap: () { Navigator.pop(context); _showNotificationsSheet(); }),
-                  _drawerTile(icon: Icons.badge_outlined, color: PromaxColors.blueAction, title: "تغییر نام و پسورد", subtitle: "ویرایش مشخصات ادمین", onTap: () { Navigator.pop(context); _showEditProfileDialog(); }),
-                  if (isSuperAdmin)
-                    _drawerTile(icon: Icons.person_add_alt_1_outlined, color: PromaxColors.greenAction, title: "افزودن همکار / ادمین جدید", subtitle: "تعریف دسترسی فروشنده", onTap: () { Navigator.pop(context); _showCreateAdminDialog(); }),
-                  const Divider(height: 24),
                   _drawerTile(icon: Icons.file_download_outlined, color: Colors.teal, title: "خروجی فایل اکسل (Excel)", subtitle: "گزارش فروش و مالیات", onTap: () { Navigator.pop(context); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("جهت دانلود اکسل به promaxmobile.ir/api.php?action=export_excel بروید"))); }),
                   _drawerTile(icon: Icons.cloud_download_outlined, color: Colors.deepPurple, title: "دانلود بک‌آپ دیتابیس (SQL)", subtitle: "پشتیبان‌گیری پایگاه داده", onTap: () { Navigator.pop(context); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("جهت دانلود بک‌آپ به promaxmobile.ir/api.php?action=backup_db بروید"))); }),
                 ],
@@ -536,81 +541,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         subtitle: Text(subtitle, style: const TextStyle(fontSize: 10.5, color: PromaxColors.textMuted)),
         trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
         onTap: onTap,
-      ),
-    );
-  }
-
-  void _showEditProfileDialog() {
-    final nameCtl = TextEditingController(text: widget.adminData['full_name']);
-    final userCtl = TextEditingController(text: widget.adminData['username']);
-    final passCtl = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text("ویرایش حساب"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: nameCtl, decoration: const InputDecoration(labelText: "نام کامل")),
-            TextField(controller: userCtl, decoration: const InputDecoration(labelText: "نام کاربری")),
-            TextField(controller: passCtl, obscureText: true, decoration: const InputDecoration(labelText: "رمز جدید (اختیاری)")),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("انصراف")),
-          FilledButton(
-            onPressed: () async {
-              final res = await http.post(
-                Uri.parse("$serverUrl?action=update_profile"),
-                headers: {"Content-Type": "application/json"},
-                body: jsonEncode({"admin_id": widget.adminData['id'], "full_name": nameCtl.text, "username": userCtl.text, "new_password": passCtl.text}),
-              );
-              final d = jsonDecode(res.body);
-              if (ctx.mounted) Navigator.pop(ctx);
-              if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(d['message'])));
-            },
-            child: const Text("ذخیره"),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showCreateAdminDialog() {
-    final nameCtl = TextEditingController();
-    final userCtl = TextEditingController();
-    final passCtl = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text("افزودن ادمین جدید"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: nameCtl, decoration: const InputDecoration(labelText: "نام کامل همکار")),
-            TextField(controller: userCtl, decoration: const InputDecoration(labelText: "نام کاربری")),
-            TextField(controller: passCtl, decoration: const InputDecoration(labelText: "کلمه عبور")),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("انصراف")),
-          FilledButton(
-            onPressed: () async {
-              if (userCtl.text.isEmpty || passCtl.text.isEmpty) return;
-              final res = await http.post(
-                Uri.parse("$serverUrl?action=create_admin"),
-                headers: {"Content-Type": "application/json"},
-                body: jsonEncode({"requester_role": widget.adminData['role'], "full_name": nameCtl.text, "username": userCtl.text, "password": passCtl.text}),
-              );
-              final d = jsonDecode(res.body);
-              if (ctx.mounted) Navigator.pop(ctx);
-              if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(d['message'])));
-            },
-            child: const Text("ثبت همکار"),
-          ),
-        ],
       ),
     );
   }
@@ -734,7 +664,7 @@ class PromaxPageLayout extends StatelessWidget {
   }
 }
 
-// ==================== ۱. خرید گوشی (دو IMEI) ====================
+// ==================== ۱. خرید گوشی ====================
 class BuyPhoneScreen extends StatefulWidget {
   final Map<String, dynamic> adminData;
   final VoidCallback openDrawer;
@@ -923,7 +853,7 @@ class _BuyPhoneScreenState extends State<BuyPhoneScreen> {
   }
 }
 
-// ==================== ۲. فروش گوشی (جستجوی انبار و قرض با تاریخ موعود) ====================
+// ==================== ۲. فروش گوشی ====================
 class SellPhoneScreen extends StatefulWidget {
   final Map<String, dynamic> adminData;
   final VoidCallback openDrawer;
@@ -1174,7 +1104,7 @@ class _SellPhoneScreenState extends State<SellPhoneScreen> {
   }
 }
 
-// ==================== ۳. گزارشات و ارزش کل انبار ====================
+// ==================== ۳. گزارشات (با قابلیت حذف، ویرایش و تغییر رجیستری) ====================
 class InventoryAndReportsScreen extends StatefulWidget {
   final Map<String, dynamic> adminData;
   final VoidCallback openDrawer;
@@ -1226,6 +1156,95 @@ class _InventoryAndReportsScreenState extends State<InventoryAndReportsScreen> {
       case 'year': return 'یکساله';
       default: return 'امروز';
     }
+  }
+
+  // حذف سفارش
+  void _deleteOrder(Map<String, dynamic> item) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("حذف سفارش", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+        content: Text("آیا از حذف کامل دستگاه ${item['brand']} ${item['model']} اطمینان دارید؟ این عمل غیرقابل بازگشت است."),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("انصراف")),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () async {
+              final res = await http.post(
+                Uri.parse("$serverUrl?action=delete_phone"),
+                headers: {"Content-Type": "application/json"},
+                body: jsonEncode({"phone_id": item['id']}),
+              );
+              final d = jsonDecode(res.body);
+              if (ctx.mounted) Navigator.pop(ctx);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(d['message'])));
+                load();
+              }
+            },
+            child: const Text("حذف قطعی"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // تغییر مستقیم وضعیت رجیستری
+  void _showChangeRegistryDialog(Map<String, dynamic> item) {
+    String currentReg = item['registry_status'] ?? registryOptions[0];
+    bool verified = item['hamta_verified'] == 1;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text("تغییر وضعیت انتقال رجیستری", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text("دستگاه: ${item['brand']} ${item['model']} (IMEI: ${item['imei']})", style: const TextStyle(fontSize: 12, color: PromaxColors.textMuted)),
+              const SizedBox(height: 14),
+              DropdownButtonFormField<String>(
+                value: currentReg,
+                decoration: const InputDecoration(labelText: "وضعیت جدید رجیستری", border: OutlineInputBorder()),
+                items: registryOptions.map((r) => DropdownMenuItem(value: r, child: Text(r, style: const TextStyle(fontSize: 12.5)))).toList(),
+                onChanged: (v) => setDialogState(() => currentReg = v!),
+              ),
+              const SizedBox(height: 8),
+              CheckboxListTile(
+                value: verified,
+                title: const Text("تأییدیه نهایی همتا دریافت شد", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                onChanged: (v) => setDialogState(() => verified = v!),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("انصراف")),
+            FilledButton(
+              onPressed: () async {
+                final res = await http.post(
+                  Uri.parse("$serverUrl?action=update_registry_status"),
+                  headers: {"Content-Type": "application/json"},
+                  body: jsonEncode({
+                    "phone_id": item['id'],
+                    "registry_status": currentReg,
+                    "hamta_verified": verified ? 1 : 0,
+                  }),
+                );
+                final d = jsonDecode(res.body);
+                if (ctx.mounted) Navigator.pop(ctx);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(d['message'])));
+                  load();
+                }
+              },
+              child: const Text("ذخیره تغییر وضعیت"),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showEditOrderDialog(Map<String, dynamic> item) {
@@ -1366,6 +1385,19 @@ class _InventoryAndReportsScreenState extends State<InventoryAndReportsScreen> {
                 _detailRow("ادمین فروشنده:", "${item['sold_by_admin'] ?? 'مدیر'}"),
               ],
               const SizedBox(height: 16),
+              // دکمه تغییر وضعیت انتقال رجیستری
+              if (item['registry_status'] != 'بدون ریجستر') ...[
+                OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    _showChangeRegistryDialog(item);
+                  },
+                  icon: const Icon(Icons.sync_alt_rounded),
+                  label: const Text("تغییر وضعیت انتقال رجیستری / همتا"),
+                  style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(46), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                ),
+                const SizedBox(height: 8),
+              ],
               OutlinedButton.icon(
                 onPressed: () { Navigator.pop(ctx); _showEditOrderDialog(item); },
                 icon: const Icon(Icons.edit_note_rounded),
@@ -1378,6 +1410,16 @@ class _InventoryAndReportsScreenState extends State<InventoryAndReportsScreen> {
                 icon: const Icon(Icons.print_rounded),
                 label: const Text("چاپ فاکتور رسمی"),
                 style: FilledButton.styleFrom(backgroundColor: PromaxColors.blueAction, minimumSize: const Size.fromHeight(46), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+              ),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  _deleteOrder(item);
+                },
+                icon: const Icon(Icons.delete_forever, color: Colors.red),
+                label: const Text("حذف این سفارش", style: TextStyle(color: Colors.red)),
+                style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.red), minimumSize: const Size.fromHeight(46), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
               ),
               const SizedBox(height: 16),
             ],
@@ -1443,6 +1485,7 @@ class _InventoryAndReportsScreenState extends State<InventoryAndReportsScreen> {
               ),
             ),
             const SizedBox(height: 12),
+            // کارت نمایش ارزش کل و تعداد انبار کنار هم
             Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(gradient: const LinearGradient(colors: [PromaxColors.headerGradientStart, PromaxColors.blueAction]), borderRadius: BorderRadius.circular(20)),
@@ -1459,8 +1502,8 @@ class _InventoryAndReportsScreenState extends State<InventoryAndReportsScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text("ارزش کل انبار: ${formatToman(summary?['stock_value'])} ت", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
-                      Text("کل طلب: ${formatToman(summary?['total_debt'])} ت", style: const TextStyle(color: Color(0xFFFDE047), fontWeight: FontWeight.bold, fontSize: 12)),
+                      Text("موجودی کل انبار: ${summary?['total_items_count'] ?? summary?['stock_count']} کالا", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                      Text("ارزش انبار: ${formatToman(summary?['stock_value'])} ت", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
                     ],
                   ),
                 ],
@@ -1525,7 +1568,7 @@ class _InventoryAndReportsScreenState extends State<InventoryAndReportsScreen> {
                           child: OutlinedButton.icon(
                             onPressed: () => showDetailsModal(item),
                             icon: const Icon(Icons.info_outline_rounded, size: 16),
-                            label: const FittedBox(fit: BoxFit.scaleDown, child: Text("اطلاعات کامل و ویرایش", style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold))),
+                            label: const FittedBox(fit: BoxFit.scaleDown, child: Text("اطلاعات کامل", style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold))),
                             style: OutlinedButton.styleFrom(foregroundColor: PromaxColors.blueAction, side: const BorderSide(color: PromaxColors.blueAction), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
                           ),
                         ),
@@ -1551,7 +1594,7 @@ class _InventoryAndReportsScreenState extends State<InventoryAndReportsScreen> {
   }
 }
 
-// ==================== ۴. لوازم جانبی ====================
+// ==================== ۴. بخش لوازم جانبی (با دکمه افزودن و فروش) ====================
 class AccessoriesScreen extends StatefulWidget {
   final Map<String, dynamic> adminData;
   final VoidCallback openDrawer;
@@ -1588,6 +1631,102 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
     } catch (_) { setState(() => loading = false); }
   }
 
+  void _showAddDialog() {
+    final nameCtl = TextEditingController();
+    final catCtl = TextEditingController(text: "قاب و گلس");
+    final stockCtl = TextEditingController();
+    final buyCtl = TextEditingController();
+    final saleCtl = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text("افزودن کالای جانبی جدید"),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(controller: nameCtl, decoration: const InputDecoration(labelText: "نام کالا (مثلاً شارژر ۲۰ وات اپل)")),
+              TextField(controller: catCtl, decoration: const InputDecoration(labelText: "دسته‌بندی (شارژر، قاب، ایرپاد)")),
+              TextField(controller: stockCtl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: "تعداد موجودی")),
+              TextField(controller: buyCtl, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly, CurrencyInputFormatter()], decoration: const InputDecoration(labelText: "قیمت خرید (تومان)")),
+              TextField(controller: saleCtl, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly, CurrencyInputFormatter()], decoration: const InputDecoration(labelText: "قیمت فروش (تومان)")),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("انصراف")),
+          FilledButton(
+            onPressed: () async {
+              if (nameCtl.text.isEmpty || stockCtl.text.isEmpty) return;
+              await http.post(
+                Uri.parse("$serverUrl?action=add_accessory"),
+                headers: {"Content-Type": "application/json"},
+                body: jsonEncode({
+                  "name": nameCtl.text,
+                  "category": catCtl.text,
+                  "stock": int.parse(stockCtl.text),
+                  "buy_price": int.parse(buyCtl.text.replaceAll(',', '')),
+                  "sale_price": int.parse(saleCtl.text.replaceAll(',', '')),
+                }),
+              );
+              if (ctx.mounted) Navigator.pop(ctx);
+              load();
+            },
+            child: const Text("ثبت در انبار"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSellDialog(Map<String, dynamic> item) {
+    final qtyCtl = TextEditingController(text: "1");
+    final buyerCtl = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text("فروش سریع: ${item['name']}"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text("موجودی در انبار: ${item['stock']} عدد"),
+            Text("قیمت هر عدد: ${formatToman(item['sale_price'])} تومان"),
+            TextField(controller: qtyCtl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: "تعداد فروش")),
+            TextField(controller: buyerCtl, decoration: const InputDecoration(labelText: "نام خریدار (اختیاری)")),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("انصراف")),
+          FilledButton(
+            onPressed: () async {
+              final res = await http.post(
+                Uri.parse("$serverUrl?action=sell_accessory"),
+                headers: {"Content-Type": "application/json"},
+                body: jsonEncode({
+                  "accessory_id": item['id'],
+                  "quantity": int.parse(qtyCtl.text),
+                  "buyer_name": buyerCtl.text,
+                  "admin_name": widget.adminData['full_name'],
+                }),
+              );
+              final d = jsonDecode(res.body);
+              if (ctx.mounted) Navigator.pop(ctx);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(d['message'])));
+                load();
+              }
+            },
+            child: const Text("ثبت فروش و کسر از انبار"),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return PromaxPageLayout(
@@ -1602,16 +1741,33 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
         child: ListView(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           children: [
+            FilledButton.icon(
+              onPressed: _showAddDialog,
+              icon: const Icon(Icons.add),
+              label: const Text("افزودن کالای جانبی جدید به انبار", style: TextStyle(fontWeight: FontWeight.bold)),
+              style: FilledButton.styleFrom(backgroundColor: PromaxColors.blueAction, minimumSize: const Size.fromHeight(50), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+            ),
+            const SizedBox(height: 16),
             if (loading) const Center(child: CircularProgressIndicator())
-            else ...accessories.map((item) => Card(
-              margin: const EdgeInsets.only(bottom: 10),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              child: ListTile(
-                leading: const CircleAvatar(backgroundColor: Color(0xFFEFF6FF), child: Icon(Icons.headphones, color: PromaxColors.blueAction)),
-                title: Text(item['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                subtitle: Text("موجودی: ${item['stock']} عدد | فروش: ${formatToman(item['sale_price'])} ت", style: const TextStyle(fontSize: 11)),
-              ),
-            )),
+            else if (accessories.isEmpty)
+              const Center(child: Padding(padding: EdgeInsets.all(30), child: Text("هیچ کالای جانبی در انبار ثبت نشده است", style: TextStyle(color: Colors.grey))))
+            else ...accessories.map((item) {
+              final int currentStock = int.tryParse(item['stock']?.toString() ?? '0') ?? 0;
+              return Card(
+                margin: const EdgeInsets.only(bottom: 10),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                child: ListTile(
+                  leading: const CircleAvatar(backgroundColor: Color(0xFFEFF6FF), child: Icon(Icons.headphones, color: PromaxColors.blueAction)),
+                  title: Text(item['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  subtitle: Text("موجودی: $currentStock عدد | فروش: ${formatToman(item['sale_price'])} ت", style: const TextStyle(fontSize: 11)),
+                  trailing: ElevatedButton(
+                    onPressed: currentStock > 0 ? () => _showSellDialog(item) : null,
+                    style: ElevatedButton.styleFrom(backgroundColor: PromaxColors.greenAction, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+                    child: const Text("فروش"),
+                  ),
+                ),
+              );
+            }),
           ],
         ),
       ),
