@@ -182,7 +182,7 @@ Future<void> openSafeScanner(BuildContext context, Function(String) onFound) asy
   if (result != null && result is String) onFound(result);
 }
 
-// ==================== صفحه ورود با اثر انگشت / بیومتریک ====================
+// ==================== صفحه ورود با بیومتریک ====================
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -220,7 +220,7 @@ class _LoginScreenState extends State<LoginScreen> {
       try {
         bool authenticated = await auth.authenticate(
           localizedReason: 'ورود سریع به حسابدار پرومکس',
-          options: const AuthenticationOptions(biometricOnly: true, stickyAuthentication: true),
+          options: const AuthenticationOptions(biometricOnly: true),
         );
         if (authenticated) {
           userCtl.text = savedUser;
@@ -259,7 +259,7 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       bool authenticated = await auth.authenticate(
         localizedReason: 'لطفاً اثر انگشت خود را تایید کنید',
-        options: const AuthenticationOptions(biometricOnly: false, stickyAuthentication: true),
+        options: const AuthenticationOptions(biometricOnly: false),
       );
       if (authenticated) {
         final savedUser = await storage.read(key: 'promax_user');
@@ -283,36 +283,55 @@ class _LoginScreenState extends State<LoginScreen> {
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
-          child: Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(28), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 20)]),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.phone_android_rounded, size: 60, color: PromaxColors.blueAction),
-                const SizedBox(height: 10),
-                const Text("PROMAX MOBILE", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
-                Text("توسعه‌دهنده: $developerName | نسخه $appVersion", style: const TextStyle(fontSize: 11, color: PromaxColors.textMuted)),
-                const SizedBox(height: 24),
-                TextField(controller: userCtl, decoration: InputDecoration(labelText: "نام کاربری", border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)))),
-                const SizedBox(height: 12),
-                TextField(controller: passCtl, obscureText: true, decoration: InputDecoration(labelText: "رمز عبور", border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)))),
-                const SizedBox(height: 20),
-                FilledButton(
-                  onPressed: loading ? null : login,
-                  style: FilledButton.styleFrom(backgroundColor: PromaxColors.blueAction, minimumSize: const Size.fromHeight(50), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
-                  child: loading ? const CircularProgressIndicator(color: Colors.white) : const Text("ورود به سامانه", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-                ),
-                if (canCheckBiometrics) ...[
-                  const SizedBox(height: 12),
-                  OutlinedButton.icon(
-                    onPressed: _authenticateBiometric,
-                    icon: const Icon(Icons.fingerprint, color: PromaxColors.blueAction, size: 26),
-                    label: const Text("ورود با اثر انگشت / Face ID", style: TextStyle(color: PromaxColors.blueAction)),
-                    style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48), side: const BorderSide(color: PromaxColors.blueAction), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+          child: TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0.85, end: 1.0),
+            duration: const Duration(milliseconds: 600),
+            curve: Curves.easeOutBack,
+            builder: (context, scale, child) => Transform.scale(scale: scale, child: child),
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(28),
+                boxShadow: [
+                  BoxShadow(color: PromaxColors.blueAction.withOpacity(0.12), blurRadius: 24, offset: const Offset(0, 10)),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: PromaxColors.blueAction.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.phone_android_rounded, size: 54, color: PromaxColors.blueAction),
                   ),
-                ]
-              ],
+                  const SizedBox(height: 12),
+                  const Text("PROMAX MOBILE", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
+                  Text("توسعه‌دهنده: $developerName | نسخه $appVersion", style: const TextStyle(fontSize: 11, color: PromaxColors.textMuted)),
+                  const SizedBox(height: 24),
+                  TextField(controller: userCtl, decoration: InputDecoration(labelText: "نام کاربری", prefixIcon: const Icon(Icons.person_outline), border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)))),
+                  const SizedBox(height: 12),
+                  TextField(controller: passCtl, obscureText: true, decoration: InputDecoration(labelText: "رمز عبور", prefixIcon: const Icon(Icons.lock_outline), border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)))),
+                  const SizedBox(height: 20),
+                  FilledButton(
+                    onPressed: loading ? null : login,
+                    style: FilledButton.styleFrom(backgroundColor: PromaxColors.blueAction, minimumSize: const Size.fromHeight(50), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+                    child: loading ? const CircularProgressIndicator(color: Colors.white) : const Text("ورود به سامانه", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                  ),
+                  if (canCheckBiometrics) ...[
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      onPressed: _authenticateBiometric,
+                      icon: const Icon(Icons.fingerprint, color: PromaxColors.blueAction, size: 26),
+                      label: const Text("ورود با اثر انگشت / Face ID", style: TextStyle(color: PromaxColors.blueAction, fontWeight: FontWeight.bold)),
+                      style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48), side: const BorderSide(color: PromaxColors.blueAction), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+                    ),
+                  ]
+                ],
+              ),
             ),
           ),
         ),
@@ -321,7 +340,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 }
 
-// ==================== ناوبری اصلی و سایدبار مدرن ====================
+// ==================== ناوبری اصلی و سایدبار ====================
 class MainNavigationScreen extends StatefulWidget {
   final Map<String, dynamic> adminData;
   const MainNavigationScreen({super.key, required this.adminData});
@@ -604,7 +623,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
             decoration: BoxDecoration(color: isSelected ? const Color(0xFFE0E7FF) : Colors.transparent, borderRadius: BorderRadius.circular(16)),
             child: Icon(icon, color: isSelected ? PromaxColors.blueAction : PromaxColors.textMuted, size: 22),
@@ -1153,7 +1174,7 @@ class _SellPhoneScreenState extends State<SellPhoneScreen> {
   }
 }
 
-// ==================== ۳. گزارشات و ارزش کل انبار (با قابلیت ویرایش کامل سفارش) ====================
+// ==================== ۳. گزارشات و ارزش کل انبار ====================
 class InventoryAndReportsScreen extends StatefulWidget {
   final Map<String, dynamic> adminData;
   final VoidCallback openDrawer;
@@ -1422,7 +1443,6 @@ class _InventoryAndReportsScreenState extends State<InventoryAndReportsScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            // کارت نمایش ارزش کل انبار
             Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(gradient: const LinearGradient(colors: [PromaxColors.headerGradientStart, PromaxColors.blueAction]), borderRadius: BorderRadius.circular(20)),
@@ -1470,13 +1490,16 @@ class _InventoryAndReportsScreenState extends State<InventoryAndReportsScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Row(
-                          children: [
-                            Icon(isSold ? Icons.check_circle_rounded : Icons.phone_android_rounded, color: isSold ? Colors.blueGrey : PromaxColors.blueAction, size: 20),
-                            const SizedBox(width: 8),
-                            Text("${item['brand']} ${item['model']}", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                          ],
+                        Flexible(
+                          child: Row(
+                            children: [
+                              Icon(isSold ? Icons.check_circle_rounded : Icons.phone_android_rounded, color: isSold ? Colors.blueGrey : PromaxColors.blueAction, size: 20),
+                              const SizedBox(width: 8),
+                              Flexible(child: Text("${item['brand']} ${item['model']}", overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14))),
+                            ],
+                          ),
                         ),
+                        const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(color: isSold ? Colors.grey.shade100 : Colors.green.shade50, borderRadius: BorderRadius.circular(8)),
@@ -1485,12 +1508,13 @@ class _InventoryAndReportsScreenState extends State<InventoryAndReportsScreen> {
                       ],
                     ),
                     const SizedBox(height: 6),
-                    Text("IMEI: ${item['imei']}${item['imei2'] != null && item['imei2'].toString().isNotEmpty ? ' / ' + item['imei2'] : ''}", style: const TextStyle(fontSize: 11, color: PromaxColors.textMuted)),
+                    Text("IMEI: ${item['imei']}${item['imei2'] != null && item['imei2'].toString().isNotEmpty ? ' / ' + item['imei2'] : ''}", overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, color: PromaxColors.textMuted)),
                     const SizedBox(height: 4),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text("ثبت: ${item['created_by_admin'] ?? 'مدیر'}", style: const TextStyle(fontSize: 11, color: Color(0xFF2563EB), fontWeight: FontWeight.bold)),
+                        Flexible(child: Text("ثبت: ${item['created_by_admin'] ?? 'مدیر'}", overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, color: Color(0xFF2563EB), fontWeight: FontWeight.bold))),
+                        const SizedBox(width: 8),
                         Text("${formatToman(isSold ? item['sale_price'] : item['purchase_price'])} تومان", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                       ],
                     ),
@@ -1501,7 +1525,7 @@ class _InventoryAndReportsScreenState extends State<InventoryAndReportsScreen> {
                           child: OutlinedButton.icon(
                             onPressed: () => showDetailsModal(item),
                             icon: const Icon(Icons.info_outline_rounded, size: 16),
-                            label: const Text("اطلاعات کامل", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                            label: const FittedBox(fit: BoxFit.scaleDown, child: Text("اطلاعات کامل و ویرایش", style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold))),
                             style: OutlinedButton.styleFrom(foregroundColor: PromaxColors.blueAction, side: const BorderSide(color: PromaxColors.blueAction), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
                           ),
                         ),
@@ -1510,7 +1534,7 @@ class _InventoryAndReportsScreenState extends State<InventoryAndReportsScreen> {
                           child: FilledButton.icon(
                             onPressed: () => _printInvoice(item),
                             icon: const Icon(Icons.print_rounded, size: 16),
-                            label: const Text("چاپ فاکتور", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                            label: const FittedBox(fit: BoxFit.scaleDown, child: Text("چاپ فاکتور", style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold))),
                             style: FilledButton.styleFrom(backgroundColor: PromaxColors.greenAction, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
                           ),
                         ),
