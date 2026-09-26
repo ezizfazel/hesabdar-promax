@@ -14,7 +14,7 @@ import 'package:shimmer/shimmer.dart';
 import 'invoice.dart';
 
 const String serverUrl = "https://promaxmobile.ir/api.php";
-const String appVersion = "1.6.0";
+const String appVersion = "1.7.0";
 const String developerName = "ezizfd";
 
 const List<String> popularBrands = [
@@ -126,17 +126,14 @@ class PromaxSkeletonLoading extends StatelessWidget {
         itemCount: 4,
         itemBuilder: (_, __) => Padding(
           padding: const EdgeInsets.only(bottom: 16.0),
-          child: Container(
-            height: 120,
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
-          ),
+          child: Container(height: 120, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20))),
         ),
       ),
     );
   }
 }
 
-// ساختار هدر یکپارچه برای تمامی صفحات
+// ساختار هدر یکپارچه
 class PromaxPageLayout extends StatelessWidget {
   final String title;
   final String adminName;
@@ -268,7 +265,7 @@ Widget _buildInput({required TextEditingController controller, required String h
   );
 }
 
-// ==================== اسکنر مستقل بارکد ====================
+// ==================== اسکنر بارکد ====================
 class CameraScannerScreen extends StatefulWidget {
   const CameraScannerScreen({super.key});
 
@@ -307,7 +304,7 @@ class _CameraScannerScreenState extends State<CameraScannerScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("اسکن بارکد IMEI"), backgroundColor: PromaxColors.headerGradientStart, foregroundColor: Colors.white),
+      appBar: AppBar(title: const Text("اسکن بارکد"), backgroundColor: PromaxColors.headerGradientStart, foregroundColor: Colors.white),
       body: Stack(
         alignment: Alignment.center,
         children: [
@@ -321,7 +318,7 @@ class _CameraScannerScreenState extends State<CameraScannerScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(20)),
-              child: const Text("بارکد IMEI را داخل کادر بگیرید", style: TextStyle(color: Colors.white, fontSize: 12)),
+              child: const Text("بارکد کالا را داخل کادر بگیرید", style: TextStyle(color: Colors.white, fontSize: 12)),
             ),
           )
         ],
@@ -847,7 +844,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   }
 }
 
-// ==================== داشبورد آمار و تحلیل مالی ====================
+// ==================== داشبورد آمار مالی، نقدینگی و بدهکاران ====================
 class AnalyticsDashboardScreen extends StatefulWidget {
   final Map<String, dynamic> adminData;
   final VoidCallback openDrawer;
@@ -904,12 +901,122 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
     }
   }
 
+  // دیالوگ ویرایش دستی موجودی نقدی کارت‌ها
+  void _showEditBankBalanceDialog() {
+    final balCtl = TextEditingController(text: formatToman(data?['bank_balance'] ?? 0));
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text("تنظیم موجودی کارت‌های بانکی"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text("موجودی نقدی واقعی کارت‌های خود را وارد کنید:", style: TextStyle(fontSize: 12)),
+            const SizedBox(height: 12),
+            TextField(
+              controller: balCtl,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly, CurrencyInputFormatter()],
+              decoration: const InputDecoration(labelText: "موجودی کارت (تومان)", border: OutlineInputBorder()),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("انصراف")),
+          FilledButton(
+            onPressed: () async {
+              final cleanBal = int.tryParse(balCtl.text.replaceAll(',', '')) ?? 0;
+              await http.post(
+                Uri.parse("$serverUrl?action=update_bank_balance"),
+                headers: {"Content-Type": "application/json"},
+                body: jsonEncode({"bank_balance": cleanBal}),
+              );
+              if (ctx.mounted) Navigator.pop(ctx);
+              loadAnalytics();
+            },
+            child: const Text("ذخیره موجودی"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // دیالوگ ثبت هزینه یا برداشت سود
+  void _showAddExpenseDialog() {
+    final titleCtl = TextEditingController();
+    final amountCtl = TextEditingController();
+    final descCtl = TextEditingController();
+    String cat = 'اجاره مغازه';
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text("برداشت سود و ثبت هزینه‌ها", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButtonFormField<String>(
+                  value: cat,
+                  decoration: const InputDecoration(labelText: "دسته‌بندی هزینه", border: OutlineInputBorder()),
+                  items: ['اجاره مغازه', 'قبوض آب/برق/گاز', 'برداشت سود شخصی', 'پیک و اسنپ', 'حقوق و شاگرد', 'متفرقه'].map((c) => DropdownMenuItem(value: c, child: Text(c, style: const TextStyle(fontSize: 12)))).toList(),
+                  onChanged: (v) => setDialogState(() => cat = v!),
+                ),
+                const SizedBox(height: 10),
+                TextField(controller: titleCtl, decoration: const InputDecoration(labelText: "عنوان هزینه (مثلاً اجاره شهریور)", border: OutlineInputBorder())),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: amountCtl,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly, CurrencyInputFormatter()],
+                  decoration: const InputDecoration(labelText: "مبلغ برداشت (تومان)", border: OutlineInputBorder()),
+                ),
+                const SizedBox(height: 10),
+                TextField(controller: descCtl, decoration: const InputDecoration(labelText: "توضیحات (اختیاری)", border: OutlineInputBorder())),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("انصراف")),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: Colors.red.shade700),
+              onPressed: () async {
+                if (amountCtl.text.isEmpty) return;
+                await http.post(
+                  Uri.parse("$serverUrl?action=add_expense"),
+                  headers: {"Content-Type": "application/json"},
+                  body: jsonEncode({
+                    "title": titleCtl.text.isEmpty ? cat : titleCtl.text,
+                    "amount": int.parse(amountCtl.text.replaceAll(',', '')),
+                    "category": cat,
+                    "description": descCtl.text,
+                    "admin_name": widget.adminData['full_name'],
+                  }),
+                );
+                if (ctx.mounted) Navigator.pop(ctx);
+                loadAnalytics();
+              },
+              child: const Text("ثبت و کسر از نقدینگی"),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final int bankBalance = data?['bank_balance'] ?? 0;
+    final int totalLiquidity = data?['total_liquidity'] ?? (bankBalance + (data?['stock_value'] ?? 0));
+    final List<dynamic> debtors = data?['debtors'] ?? [];
+
     return PromaxPageLayout(
       title: "گزارش‌ها و آمارها",
       adminName: widget.adminData['full_name'],
-      subtitle: "بررسی عملکرد فروشگاه در یک نگاه",
+      subtitle: "مدیریت نقدینگی، کارت‌ها و عملکرد فروشگاه",
       openDrawer: widget.openDrawer,
       onNotificationTap: widget.onNotificationTap,
       onSecurityTap: widget.onSecurityTap,
@@ -921,27 +1028,195 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
               child: ListView(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 children: [
+                  // نوار فیلتر زمانی
                   _buildPeriodSelector(),
                   const SizedBox(height: 14),
-                  _buildKpiGrid(),
+
+                  // کارت نقدینگی کل و موجودی کارت‌های بانکی
+                  Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(colors: [Color(0xFF0F2B48), Color(0xFF1E3A8A)], begin: Alignment.topRight, end: Alignment.bottomLeft),
+                      borderRadius: BorderRadius.circular(22),
+                      boxShadow: [BoxShadow(color: Colors.blue.withOpacity(0.2), blurRadius: 10, offset: const Offset(0, 4))],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text("نقدینگی و سرمایه کل فروشگاه", style: TextStyle(color: Colors.white70, fontSize: 12)),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(color: Colors.green.shade600, borderRadius: BorderRadius.circular(10)),
+                              child: const Text("زنده و خودکار", style: TextStyle(color: Colors.white, fontSize: 9.5, fontWeight: FontWeight.bold)),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text("${formatToman(totalLiquidity)} تومان", style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+                        const Divider(color: Colors.white24, height: 22),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text("موجودی نقدی کارت‌ها:", style: TextStyle(color: Colors.white70, fontSize: 11)),
+                                const SizedBox(height: 2),
+                                Text("${formatToman(bankBalance)} تومان", style: const TextStyle(color: Color(0xFFFDE047), fontWeight: FontWeight.bold, fontSize: 14)),
+                              ],
+                            ),
+                            Row(
+                              children: [
+                                IconButton(
+                                  tooltip: "ویرایش موجودی کارت",
+                                  icon: const Icon(Icons.edit_note, color: Colors.white),
+                                  onPressed: _showEditBankBalanceDialog,
+                                ),
+                                FilledButton.icon(
+                                  onPressed: _showAddExpenseDialog,
+                                  style: FilledButton.styleFrom(backgroundColor: Colors.red.shade600, padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6)),
+                                  icon: const Icon(Icons.remove_circle_outline, size: 16),
+                                  label: const Text("برداشت / هزینه", style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold)),
+                                ),
+                              ],
+                            )
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // تفکیک آمار موبایل و اکسسوری
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _categoryKpiCard(
+                          title: "فروش موبایل",
+                          sales: "${formatToman(data?['phone_sales'])} ت",
+                          profit: "${formatToman(data?['phone_profit'])} ت",
+                          stock: "${data?['phone_stock_count']} دستگاه",
+                          color: PromaxColors.blueAction,
+                          icon: Icons.phone_android_rounded,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _categoryKpiCard(
+                          title: "فروش اکسسوری",
+                          sales: "${formatToman(data?['acc_sales'])} ت",
+                          profit: "${formatToman(data?['acc_profit'])} ت",
+                          stock: "${data?['acc_stock_count']} کالا",
+                          color: Colors.deepPurple,
+                          icon: Icons.headphones_rounded,
+                        ),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 16),
+
+                  // کارت لیست بدهکاران
+                  _buildDebtorsCard(debtors),
+                  const SizedBox(height: 16),
+
+                  // نمودار خطی مقایسه فروش و سود
                   _buildSalesAndProfitLineChart(),
                   const SizedBox(height: 16),
+
+                  // دونات برندها
                   _buildBrandDonutChart(),
                   const SizedBox(height: 16),
-                  _buildTopBrandsSection(),
-                  const SizedBox(height: 16),
-                  _buildTopCustomersSection(),
-                  const SizedBox(height: 16),
+
+                  // میله‌ای هفتگی
                   _buildWeeklyBarChart(),
                   const SizedBox(height: 16),
+
+                  // کالاهای کم‌موجودی
                   _buildLowStockTable(),
                   const SizedBox(height: 16),
+
+                  // هوشمند
                   _buildRecentActivitiesAndAiSummary(),
                   const SizedBox(height: 20),
                 ],
               ),
             ),
+    );
+  }
+
+  Widget _categoryKpiCard({required String title, required String sales, required String profit, required String stock, required Color color, required IconData icon}) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), border: Border.all(color: PromaxColors.fieldBorder)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: color, size: 18),
+              const SizedBox(width: 6),
+              Text(title, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: color)),
+            ],
+          ),
+          const Divider(height: 14),
+          Text("فروش: $sales", style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 3),
+          Text("سود خالص: $profit", style: const TextStyle(fontSize: 10.5, color: PromaxColors.greenAction, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 3),
+          Text("موجودی: $stock", style: const TextStyle(fontSize: 10, color: PromaxColors.textMuted)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDebtorsCard(List<dynamic> debtors) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: PromaxColors.fieldBorder)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Row(
+                children: [
+                  Icon(Icons.warning_amber_rounded, color: Colors.red, size: 20),
+                  SizedBox(width: 8),
+                  Text("لیست بدهکاران فروشگاه", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.red)),
+                ],
+              ),
+              Text("${debtors.length} نفر", style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: PromaxColors.textMuted)),
+            ],
+          ),
+          const SizedBox(height: 10),
+          if (debtors.isEmpty)
+            const Padding(padding: EdgeInsets.symmetric(vertical: 10), child: Center(child: Text("تمامی حساب‌ها تسویه کامل هستند", style: TextStyle(fontSize: 11, color: Colors.green))))
+          else
+            ...debtors.map((d) => Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(color: Colors.red.shade50, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.red.shade100)),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text("${d['buyer_name']} (${d['brand']} ${d['model']})", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11.5)),
+                          const SizedBox(height: 2),
+                          Text("تماس: ${d['buyer_phone'] ?? '-'}${d['credit_due_date'] != null ? ' | موعد: ' + d['credit_due_date'] : ''}", style: const TextStyle(fontSize: 10, color: PromaxColors.textMuted)),
+                        ],
+                      ),
+                      Text("${formatToman(d['remaining_amount'])} ت", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.red)),
+                    ],
+                  ),
+                )),
+        ],
+      ),
     );
   }
 
@@ -964,57 +1239,6 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
             ),
           );
         }).toList(),
-      ),
-    );
-  }
-
-  Widget _buildKpiGrid() {
-    final stockVal = data?['stock_value'] ?? 1480000000;
-    final stockCount = data?['stock_count'] ?? 42;
-    final sales = data?['selected_profit'] != null ? data!['selected_profit'] * 5 : 3250000000;
-    final profit = data?['selected_profit'] ?? 487500000;
-    final buy = (sales * 0.8).toInt();
-
-    return Column(
-      children: [
-        Row(
-          children: [
-            Expanded(child: _kpiCard(title: "موجودی کل", value: formatToman(stockVal), subtitle: "تعداد: $stockCount دستگاه", icon: Icons.inventory_2_rounded, iconColor: Colors.blue.shade700, iconBg: Colors.blue.shade50)),
-            const SizedBox(width: 10),
-            Expanded(child: _kpiCard(title: "کل خرید", value: formatToman(buy), subtitle: "+۱۲٪ نسبت به قبل", subtitleColor: PromaxColors.greenAction, icon: Icons.shopping_cart_rounded, iconColor: Colors.indigo.shade700, iconBg: Colors.indigo.shade50)),
-          ],
-        ),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(child: _kpiCard(title: "کل فروش", value: formatToman(sales), subtitle: "+۲۴٪ نسبت به ماه قبل", subtitleColor: PromaxColors.greenAction, icon: Icons.point_of_sale_rounded, iconColor: Colors.blue.shade600, iconBg: Colors.blue.shade50)),
-            const SizedBox(width: 10),
-            Expanded(child: _kpiCard(title: "کل سود", value: formatToman(profit), subtitle: "+۱۸٪ نسبت به قبل", subtitleColor: PromaxColors.greenAction, icon: Icons.account_balance_wallet_rounded, iconColor: Colors.green.shade700, iconBg: Colors.green.shade50)),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _kpiCard({required String title, required String value, required String subtitle, Color? subtitleColor, required IconData icon, required Color iconColor, required Color iconBg}) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), border: Border.all(color: PromaxColors.fieldBorder), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 6, offset: const Offset(0, 2))]),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(title, style: const TextStyle(fontSize: 11.5, color: PromaxColors.textMuted)),
-              Container(padding: const EdgeInsets.all(6), decoration: BoxDecoration(color: iconBg, borderRadius: BorderRadius.circular(10)), child: Icon(icon, color: iconColor, size: 18)),
-            ],
-          ),
-          const SizedBox(height: 8),
-          FittedBox(fit: BoxFit.scaleDown, child: Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)))),
-          const SizedBox(height: 6),
-          Text(subtitle, style: TextStyle(fontSize: 10, color: subtitleColor ?? PromaxColors.textMuted, fontWeight: FontWeight.w600)),
-        ],
       ),
     );
   }
@@ -1061,11 +1285,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          SizedBox(
-            height: 150,
-            width: double.infinity,
-            child: CustomPaint(painter: SmoothLineChartPainter()),
-          ),
+          SizedBox(height: 150, width: double.infinity, child: CustomPaint(painter: SmoothLineChartPainter())),
           const SizedBox(height: 8),
           const Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1159,109 +1379,6 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
             ],
           ),
           Text(percent, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTopBrandsSection() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: PromaxColors.fieldBorder)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.emoji_events_outlined, color: Colors.amber, size: 20),
-                  SizedBox(width: 8),
-                  Text("پرفروش‌ترین برندها", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                ],
-              ),
-              Text("مشاهده همه ←", style: TextStyle(fontSize: 10.5, color: PromaxColors.blueAction, fontWeight: FontWeight.bold)),
-            ],
-          ),
-          const SizedBox(height: 14),
-          _brandProgressRow("اپل", 0.42, "۴۲٪", const Color(0xFF2563EB)),
-          _brandProgressRow("سامسونگ", 0.28, "۲۸٪", const Color(0xFF6366F1)),
-          _brandProgressRow("شیائومی", 0.12, "۱۲٪", const Color(0xFFF97316)),
-          _brandProgressRow("آنر", 0.06, "۶٪", const Color(0xFF06B6D4)),
-          _brandProgressRow("هواوی", 0.05, "۵٪", const Color(0xFFEC4899)),
-        ],
-      ),
-    );
-  }
-
-  Widget _brandProgressRow(String name, double progress, String label, Color color) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        children: [
-          SizedBox(width: 55, child: Text(name, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600))),
-          Expanded(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: LinearProgressIndicator(value: progress, minHeight: 7, backgroundColor: Colors.grey.shade100, color: color),
-            ),
-          ),
-          const SizedBox(width: 10),
-          SizedBox(width: 28, child: Text(label, style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold))),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTopCustomersSection() {
-    final customers = [
-      {"name": "مهدی رضایی", "phone": "۰۹۱۲۳۴۵۶۷۸۹", "val": "۵۴۵,۰۰۰,۰۰۰"},
-      {"name": "آرش کاظمی", "phone": "۰۹۱۲۱۲۳۴۵۶۷", "val": "۳۸۰,۰۰۰,۰۰۰"},
-      {"name": "سارا محمدی", "phone": "۰۹۱۹۸۷۶۵۴۳۲", "val": "۲۹۵,۰۰۰,۰۰۰"},
-      {"name": "علیرضا حسینی", "phone": "۰۹۱۲۷۶۵۴۳۲۱", "val": "۲۱۰,۰۰۰,۰۰۰"},
-      {"name": "ندا ابراهیمی", "phone": "۰۹۱۹۲۳۴۵۶۷۸", "val": "۱۸۵,۰۰۰,۰۰۰"},
-    ];
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: PromaxColors.fieldBorder)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.people_outline_rounded, color: PromaxColors.blueAction, size: 20),
-                  SizedBox(width: 8),
-                  Text("بهترین خریداران (مشتریان)", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                ],
-              ),
-              Text("مشاهده همه ←", style: TextStyle(fontSize: 10.5, color: PromaxColors.blueAction, fontWeight: FontWeight.bold)),
-            ],
-          ),
-          const SizedBox(height: 12),
-          ...customers.map((c) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 6),
-                child: Row(
-                  children: [
-                    CircleAvatar(radius: 16, backgroundColor: Colors.blue.shade100, child: Text(c['name']![0], style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: PromaxColors.blueAction))),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(c['name']!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11.5)),
-                          Text(c['phone']!, style: const TextStyle(fontSize: 9.5, color: PromaxColors.textMuted)),
-                        ],
-                      ),
-                    ),
-                    Text("${c['val']} ت", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Color(0xFF0F172A))),
-                  ],
-                ),
-              )),
         ],
       ),
     );
@@ -1445,16 +1562,8 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
 class SmoothLineChartPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final p1 = Paint()
-      ..color = const Color(0xFF2563EB)
-      ..strokeWidth = 2.5
-      ..style = PaintingStyle.stroke;
-
-    final p2 = Paint()
-      ..color = const Color(0xFF10B981)
-      ..strokeWidth = 2.5
-      ..style = PaintingStyle.stroke;
-
+    final p1 = Paint()..color = const Color(0xFF2563EB)..strokeWidth = 2.5..style = PaintingStyle.stroke;
+    final p2 = Paint()..color = const Color(0xFF10B981)..strokeWidth = 2.5..style = PaintingStyle.stroke;
     final path1 = Path();
     final path2 = Path();
 
@@ -1478,25 +1587,17 @@ class DonutChartPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Rect.fromLTWH(0, 0, size.width, size.height);
-    final paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 18;
-
+    final paint = Paint()..style = PaintingStyle.stroke..strokeWidth = 18;
     paint.color = const Color(0xFF2563EB);
     canvas.drawArc(rect, -1.57, 2.6, false, paint);
-
     paint.color = const Color(0xFF6366F1);
     canvas.drawArc(rect, 1.05, 1.7, false, paint);
-
     paint.color = const Color(0xFFF97316);
     canvas.drawArc(rect, 2.8, 0.7, false, paint);
-
     paint.color = const Color(0xFF06B6D4);
     canvas.drawArc(rect, 3.55, 0.4, false, paint);
-
     paint.color = const Color(0xFFEC4899);
     canvas.drawArc(rect, 4.0, 0.3, false, paint);
-
     paint.color = const Color(0xFF94A3B8);
     canvas.drawArc(rect, 4.35, 0.4, false, paint);
   }
@@ -1893,7 +1994,8 @@ class _SellPhoneScreenState extends State<SellPhoneScreen> {
               child: DropdownButton<String>(
                 value: selectedMethod,
                 isExpanded: true,
-                items: ['نقدی', 'قسطی', 'چکی', 'قرضی'].map((m) => DropdownMenuItem(value: m, child: Text("روش تسویه: $m", style: const TextStyle(fontSize: 13)))).toList(),
+                // اصلاح خطای متد تسویه
+                items: ['نقدی', 'قسطی', 'چکی', 'قرضی'].map((m) => DropdownMenuItem<String>(value: m, child: Text("روش تسویه: $m", style: const TextStyle(fontSize: 13)))).toList(),
                 onChanged: (v) => setState(() => selectedMethod = v!),
               ),
             ),
@@ -2297,9 +2399,9 @@ class _InventoryAndReportsScreenState extends State<InventoryAndReportsScreen> {
     }).toList();
 
     return PromaxPageLayout(
-      title: "گزارشات و انبار",
+      title: "انبار و موجودی گوشی",
       adminName: widget.adminData['full_name'],
-      subtitle: "محاسبه سود و ارزش کل موجودی فروشگاه",
+      subtitle: "لیست دقیق موجودی گوشی‌ها و مدیریت سفارشات",
       openDrawer: widget.openDrawer,
       onNotificationTap: widget.onNotificationTap,
       onSecurityTap: widget.onSecurityTap,
@@ -2317,8 +2419,8 @@ class _InventoryAndReportsScreenState extends State<InventoryAndReportsScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text("تعداد دستگاه‌های انبار: ${summary?['stock_count']} عدد", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-                      Text("ارزش انبار: ${formatToman(summary?['stock_value'])} ت", style: const TextStyle(color: Color(0xFFFDE047), fontWeight: FontWeight.bold, fontSize: 13)),
+                      Text("تعداد دستگاه‌های انبار: ${summary?['phone_stock_count'] ?? summary?['stock_count']} عدد", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                      Text("ارزش انبار: ${formatToman(summary?['phone_stock_value'] ?? summary?['stock_value'])} ت", style: const TextStyle(color: Color(0xFFFDE047), fontWeight: FontWeight.bold, fontSize: 13)),
                     ],
                   ),
                 ],
@@ -2410,7 +2512,7 @@ class _InventoryAndReportsScreenState extends State<InventoryAndReportsScreen> {
   }
 }
 
-// ==================== صفحه لوازم جانبی ====================
+// ==================== صفحه لوازم جانبی (با قابلیت اسکن بارکد و ویرایش کامل) ====================
 class AccessoriesScreen extends StatefulWidget {
   final Map<String, dynamic> adminData;
   final VoidCallback openDrawer;
@@ -2450,6 +2552,7 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
 
   void _showAddDialog() {
     final nameCtl = TextEditingController();
+    final barcodeCtl = TextEditingController();
     final catCtl = TextEditingController(text: "قاب و گلس");
     final stockCtl = TextEditingController();
     final buyCtl = TextEditingController();
@@ -2459,15 +2562,29 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text("افزودن کالای جانبی جدید به انبار"),
+        title: const Text("افزودن کالای جانبی به انبار"),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(controller: nameCtl, decoration: const InputDecoration(labelText: "نام کالا (مثلاً شارژر ۲۰ وات اپل)")),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(child: TextField(controller: barcodeCtl, decoration: const InputDecoration(labelText: "بارکد کالا (اختیاری)"))),
+                  IconButton(
+                    icon: const Icon(Icons.qr_code_scanner, color: PromaxColors.blueAction),
+                    onPressed: () => openSafeScanner(context, (code) => barcodeCtl.text = code),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
               TextField(controller: catCtl, decoration: const InputDecoration(labelText: "دسته‌بندی (شارژر، قاب، ایرپاد)")),
+              const SizedBox(height: 8),
               TextField(controller: stockCtl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: "تعداد موجودی")),
+              const SizedBox(height: 8),
               TextField(controller: buyCtl, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly, CurrencyInputFormatter()], decoration: const InputDecoration(labelText: "قیمت خرید (تومان)")),
+              const SizedBox(height: 8),
               TextField(controller: saleCtl, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly, CurrencyInputFormatter()], decoration: const InputDecoration(labelText: "قیمت فروش (تومان)")),
             ],
           ),
@@ -2482,6 +2599,7 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
                 headers: {"Content-Type": "application/json"},
                 body: jsonEncode({
                   "name": nameCtl.text,
+                  "barcode": barcodeCtl.text,
                   "category": catCtl.text,
                   "stock": int.parse(stockCtl.text),
                   "buy_price": int.parse(buyCtl.text.replaceAll(',', '')),
@@ -2492,6 +2610,68 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
               load();
             },
             child: const Text("ثبت در انبار"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showEditAccessoryDialog(Map<String, dynamic> item) {
+    final nameCtl = TextEditingController(text: item['name']);
+    final barcodeCtl = TextEditingController(text: item['barcode'] ?? '');
+    final stockCtl = TextEditingController(text: item['stock'].toString());
+    final buyCtl = TextEditingController(text: formatToman(item['buy_price']));
+    final saleCtl = TextEditingController(text: formatToman(item['sale_price']));
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text("ویرایش کالای جانبی"),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(controller: nameCtl, decoration: const InputDecoration(labelText: "نام کالا")),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(child: TextField(controller: barcodeCtl, decoration: const InputDecoration(labelText: "بارکد کالا"))),
+                  IconButton(
+                    icon: const Icon(Icons.qr_code_scanner, color: PromaxColors.blueAction),
+                    onPressed: () => openSafeScanner(context, (code) => barcodeCtl.text = code),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              TextField(controller: stockCtl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: "تعداد موجودی")),
+              const SizedBox(height: 8),
+              TextField(controller: buyCtl, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly, CurrencyInputFormatter()], decoration: const InputDecoration(labelText: "قیمت خرید (تومان)")),
+              const SizedBox(height: 8),
+              TextField(controller: saleCtl, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly, CurrencyInputFormatter()], decoration: const InputDecoration(labelText: "قیمت فروش (تومان)")),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("انصراف")),
+          FilledButton(
+            onPressed: () async {
+              await http.post(
+                Uri.parse("$serverUrl?action=update_accessory"),
+                headers: {"Content-Type": "application/json"},
+                body: jsonEncode({
+                  "id": item['id'],
+                  "name": nameCtl.text,
+                  "barcode": barcodeCtl.text,
+                  "stock": int.parse(stockCtl.text),
+                  "buy_price": int.parse(buyCtl.text.replaceAll(',', '')),
+                  "sale_price": int.parse(saleCtl.text.replaceAll(',', '')),
+                }),
+              );
+              if (ctx.mounted) Navigator.pop(ctx);
+              load();
+            },
+            child: const Text("ذخیره تغییرات"),
           ),
         ],
       ),
@@ -2537,7 +2717,7 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
                 load();
               }
             },
-            child: const Text("ثبت فروش و کسر از انبار"),
+            child: const Text("ثبت فروش و افزایش به کارت"),
           ),
         ],
       ),
@@ -2578,11 +2758,17 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
                       child: ListTile(
                         leading: const CircleAvatar(backgroundColor: Color(0xFFEFF6FF), child: Icon(Icons.headphones, color: PromaxColors.blueAction)),
                         title: Text(item['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                        subtitle: Text("موجودی: $currentStock عدد | فروش: ${formatToman(item['sale_price'])} ت", style: const TextStyle(fontSize: 11)),
-                        trailing: ElevatedButton(
-                          onPressed: currentStock > 0 ? () => _showSellDialog(item) : null,
-                          style: ElevatedButton.styleFrom(backgroundColor: PromaxColors.greenAction, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
-                          child: const Text("فروش"),
+                        subtitle: Text("موجودی: $currentStock عدد | خرید: ${formatToman(item['buy_price'])} | فروش: ${formatToman(item['sale_price'])} ت", style: const TextStyle(fontSize: 10.5)),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(icon: const Icon(Icons.edit, size: 20, color: Colors.blueGrey), onPressed: () => _showEditAccessoryDialog(item)),
+                            ElevatedButton(
+                              onPressed: currentStock > 0 ? () => _showSellDialog(item) : null,
+                              style: ElevatedButton.styleFrom(backgroundColor: PromaxColors.greenAction, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+                              child: const Text("فروش"),
+                            ),
+                          ],
                         ),
                       ),
                     );
