@@ -24,13 +24,21 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Setup Android Project
+      - name: Setup Android Project with FragmentActivity
         run: |
           rm -rf android
           flutter create . --platforms=android --org com.promax.hesabdar
-          sed -i '/<application/i \    <uses-permission android:name="android.permission.INTERNET"/>\n    <uses-permission android:name="android.permission.CAMERA"/>\n    <uses-feature android:name="android.hardware.camera" android:required="false" />\n    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />' android/app/src/main/AndroidManifest.xml
+          # تنظیم دسترسی‌های دوربین و بیومتریک
+          sed -i '/<application/i \    <uses-permission android:name="android.permission.INTERNET"/>\n    <uses-permission android:name="android.permission.CAMERA"/>\n    <uses-permission android:name="android.permission.USE_BIOMETRIC"/>\n    <uses-permission android:name="android.permission.USE_FINGERPRINT"/>\n    <uses-feature android:name="android.hardware.camera" android:required="false" />\n    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />' android/app/src/main/AndroidManifest.xml
           sed -i 's/<application/<application android:usesCleartextTraffic="true"/' android/app/src/main/AndroidManifest.xml
           sed -i 's/minSdkVersion = .*/minSdkVersion = 21/' android/app/build.gradle.kts || true
+          
+          # تغییر MainActivity به FlutterFragmentActivity جهت رفع قطعی خطای بیومتریک
+          KT_FILE="android/app/src/main/kotlin/com/promax/hesabdar/hesabdar_promax/MainActivity.kt"
+          if [ -f "$KT_FILE" ]; then
+            sed -i 's/import io.flutter.embedding.android.FlutterActivity/import io.flutter.embedding.android.FlutterFragmentActivity/' "$KT_FILE"
+            sed -i 's/class MainActivity: FlutterActivity()/class MainActivity: FlutterFragmentActivity()/' "$KT_FILE"
+          fi
 
       - name: Resolve Dependencies
         run: flutter pub get
