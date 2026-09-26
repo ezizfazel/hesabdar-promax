@@ -17,6 +17,7 @@ class InvoiceHelper {
     required int paidPrice,
     required int remainingPrice,
     required String paymentMethod,
+    required String paymentDetails,
     required String adminName,
     required String description,
     required String registryStatus,
@@ -28,116 +29,163 @@ class InvoiceHelper {
     final fontBold = await PdfGoogleFonts.vazirmatnBold();
     final now = Jalali.now();
     final timeStr = "${DateTime.now().hour}:${DateTime.now().minute.toString().padLeft(2, '0')}";
+    final invoiceNumber = "PMX-${now.year}-${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}-${DateTime.now().millisecond}";
 
     String fmt(int n) => n.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},');
 
     pdf.addPage(
       pw.Page(
         pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(20),
         theme: pw.ThemeData.withFont(base: font, bold: fontBold),
         textDirection: pw.TextDirection.rtl,
-        build: (pw.Context ctx) => pw.Container(
-          padding: const pw.EdgeInsets.all(24),
-          decoration: pw.BoxDecoration(border: pw.Border.all(width: 1.5, color: PdfColor.fromHex("#0F4C81"))),
-          child: pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.stretch,
-            children: [
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [
-                  pw.Text("ساعت: $timeStr | متصدی: $adminName", style: const pw.TextStyle(fontSize: 10)),
-                  pw.Column(
+        build: (pw.Context ctx) => pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+          children: [
+            // هدر بالای فاکتور مطابق تصویر
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Container(
+                  padding: const pw.EdgeInsets.all(12),
+                  decoration: pw.BoxDecoration(color: PdfColors.grey100, borderRadius: pw.BorderRadius.circular(12)),
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      pw.Text("فروشگاه موبایل پرومکس ($title)", style: pw.TextStyle(fontSize: 15, fontWeight: pw.FontWeight.bold, color: PdfColor.fromHex("#0F4C81"))),
-                      pw.SizedBox(height: 2),
-                      pw.Text("سامانه هوشمند صدور فاکتور و مبایعه‌نامه معتبر", style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
+                      pw.Text("شماره فاکتور: $invoiceNumber", style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11)),
+                      pw.SizedBox(height: 4),
+                      pw.Text("تاریخ صدور: ${now.year}/${now.month}/${now.day}  |  ساعت: $timeStr", style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
                     ],
                   ),
-                  pw.Text("تاریخ: ${now.year}/${now.month}/${now.day}", style: const pw.TextStyle(fontSize: 10)),
-                ],
-              ),
-              pw.Divider(thickness: 1, color: PdfColor.fromHex("#0F4C81")),
-              pw.SizedBox(height: 8),
-              pw.Text("طرف معامله: نام: $personName | شماره تماس: $phone | کد ملی: $nationalId", style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10.5)),
-              pw.SizedBox(height: 10),
-              pw.Table(
-                border: pw.TableBorder.all(color: PdfColors.grey400),
-                children: [
-                  pw.TableRow(
-                    decoration: const pw.BoxDecoration(color: PdfColors.grey200),
-                    children: [
-                      pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Center(child: pw.Text("نام کالا و مدل"))),
-                      pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Center(child: pw.Text("شناسه سریال (IMEI)"))),
-                      pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Center(child: pw.Text("مبلغ کل (تومان)"))),
-                    ],
-                  ),
-                  pw.TableRow(
-                    children: [
-                      pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Center(child: pw.Text("$brand $model"))),
-                      pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Center(child: pw.Text(imei))),
-                      pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Center(child: pw.Text(fmt(totalPrice), style: pw.TextStyle(fontWeight: pw.FontWeight.bold)))),
-                    ],
-                  ),
-                ],
-              ),
-              pw.SizedBox(height: 10),
-              // بخش سامانه همتا و رجیستری
-              pw.Container(
-                padding: const pw.EdgeInsets.all(8),
-                decoration: pw.BoxDecoration(color: PdfColors.blue50, border: pw.Border.all(color: PdfColor.fromHex("#0F4C81"))),
-                child: pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                ),
+                pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.end,
                   children: [
-                    pw.Text("وضعیت انتقال مالکیت / رجیستری: $registryStatus", style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
-                    pw.Text(hamtaVerified ? "☑ تست اصالت و رجیستری سامانه همتا انجام شد" : "☐ در انتظار استعلام نهایی همتا", style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10, color: hamtaVerified ? PdfColors.green800 : PdfColors.red800)),
+                    pw.Text("PROMAX Mobile", style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold, color: PdfColor.fromHex("#0F4C81"))),
+                    pw.Text("فروشگاه تخصصی موبایل و لوازم جانبی پرومکس", style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
+                    pw.Text("پشتیبانی: promaxmobile.ir  |  متصدی: $adminName", style: const pw.TextStyle(fontSize: 9)),
                   ],
                 ),
-              ),
-              pw.SizedBox(height: 10),
-              if (isSale)
-                pw.Container(
-                  padding: const pw.EdgeInsets.all(8),
-                  color: PdfColors.grey100,
-                  child: pw.Row(
-                    mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
-                    children: [
-                      pw.Text("روش تسویه: $paymentMethod"),
-                      pw.Text("مبلغ دریافتی: ${fmt(paidPrice)} تومان"),
-                      pw.Text("مانده بدهی: ${fmt(remainingPrice)} تومان", style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.red800)),
-                    ],
-                  ),
-                ),
-              if (description.isNotEmpty) ...[
-                pw.SizedBox(height: 8),
-                pw.Container(
-                  padding: const pw.EdgeInsets.all(6),
-                  color: PdfColors.grey50,
-                  child: pw.Text("یادداشت و توضیحات معامله: $description", style: const pw.TextStyle(fontSize: 9.5)),
-                ),
               ],
-              pw.SizedBox(height: 10),
-              pw.Container(
-                padding: const pw.EdgeInsets.all(8),
-                decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColors.grey300)),
-                child: pw.Text(
-                  isSale
-                      ? "این برگه به منزله فاکتور معتبر تحویل دستگاه بوده و وضعیت رجیستری و اصالت دستگاه طبق مفاد فوق به تایید طرفین رسیده است."
-                      : "فروشنده اقرار می‌نماید که دستگاه متعلق به وی بوده و مسئولیت هرگونه مغایرت مالکیتی یا رجیستری در سامانه همتا مستقیماً بر عهده وی می‌باشد.",
-                  textAlign: pw.TextAlign.justify,
-                  style: const pw.TextStyle(fontSize: 8.5),
-                ),
-              ),
-              pw.Spacer(),
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
+            ),
+            pw.SizedBox(height: 12),
+            // کارت مشخصات خریدار / فروشنده
+            pw.Container(
+              padding: const pw.EdgeInsets.all(10),
+              decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColors.grey300), borderRadius: pw.BorderRadius.circular(10)),
+              child: pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text("امضا و اثر انگشت خریدار / فروشنده"),
-                  pw.Text("مهر و امضای فروشگاه پرومکس"),
+                  pw.Text("نام طرف حساب: $personName", style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
+                  pw.Text("شماره تماس: $phone", style: const pw.TextStyle(fontSize: 10)),
+                  pw.Text("کد ملی: $nationalId", style: const pw.TextStyle(fontSize: 10)),
+                  pw.Text("نوع معامله: $title", style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10, color: PdfColor.fromHex("#0F4C81"))),
                 ],
               ),
-              pw.SizedBox(height: 15),
-            ],
-          ),
+            ),
+            pw.SizedBox(height: 12),
+            // جدول اقلام فاکتور
+            pw.Table(
+              border: pw.TableBorder.all(color: PdfColors.grey300),
+              children: [
+                pw.TableRow(
+                  decoration: const pw.BoxDecoration(color: PdfColor.fromInt(0xFF0F2B48)),
+                  children: [
+                    pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Center(child: pw.Text("ردیف", style: const pw.TextStyle(color: PdfColors.white, fontSize: 9)))),
+                    pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Center(child: pw.Text("نام کالا و مدل", style: const pw.TextStyle(color: PdfColors.white, fontSize: 9)))),
+                    pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Center(child: pw.Text("برند", style: const pw.TextStyle(color: PdfColors.white, fontSize: 9)))),
+                    pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Center(child: pw.Text("سریال IMEI", style: const pw.TextStyle(color: PdfColors.white, fontSize: 9)))),
+                    pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Center(child: pw.Text("رجیستری / همتا", style: const pw.TextStyle(color: PdfColors.white, fontSize: 9)))),
+                    pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Center(child: pw.Text("مبلغ کل (تومان)", style: const pw.TextStyle(color: PdfColors.white, fontSize: 9)))),
+                  ],
+                ),
+                pw.TableRow(
+                  children: [
+                    pw.Padding(padding: const pw.EdgeInsets.all(8), child: pw.Center(child: pw.Text("۱"))),
+                    pw.Padding(padding: const pw.EdgeInsets.all(8), child: pw.Center(child: pw.Text(model, style: pw.TextStyle(fontWeight: pw.FontWeight.bold)))),
+                    pw.Padding(padding: const pw.EdgeInsets.all(8), child: pw.Center(child: pw.Text(brand))),
+                    pw.Padding(padding: const pw.EdgeInsets.all(8), child: pw.Center(child: pw.Text(imei, style: const pw.TextStyle(fontSize: 9)))),
+                    pw.Padding(padding: const pw.EdgeInsets.all(8), child: pw.Center(child: pw.Text("$registryStatus (${hamtaVerified ? 'همتا تأیید شد' : 'در انتظار'})", style: const pw.TextStyle(fontSize: 8.5)))),
+                    pw.Padding(padding: const pw.EdgeInsets.all(8), child: pw.Center(child: pw.Text(fmt(totalPrice), style: pw.TextStyle(fontWeight: pw.FontWeight.bold)))),
+                  ],
+                ),
+              ],
+            ),
+            pw.SizedBox(height: 12),
+            // کارت وضعیت پرداخت و جمع کل فاکتور مطابق تصویر
+            pw.Row(
+              children: [
+                Expanded(
+                  child: pw.Container(
+                    padding: const pw.EdgeInsets.all(12),
+                    decoration: pw.BoxDecoration(color: PdfColors.grey100, borderRadius: pw.BorderRadius.circular(10)),
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text("وضعیت پرداخت", style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
+                        pw.Divider(color: PdfColors.grey300),
+                        pw.Text("روش پرداخت: $paymentMethod", style: const pw.TextStyle(fontSize: 9)),
+                        if (paymentDetails.isNotEmpty)
+                          pw.Text("جزئیات واریز/پوز: $paymentDetails", style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.blueGrey800)),
+                        pw.Text("مبلغ پرداختی: ${fmt(paidPrice)} تومان", style: const pw.TextStyle(fontSize: 9)),
+                        pw.Text("مانده حساب: ${fmt(remainingPrice)} تومان", style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: remainingPrice > 0 ? PdfColors.red800 : PdfColors.green800)),
+                      ],
+                    ),
+                  ),
+                ),
+                pw.SizedBox(width: 12),
+                Expanded(
+                  child: pw.Container(
+                    padding: const pw.EdgeInsets.all(12),
+                    decoration: pw.BoxDecoration(color: PdfColor.fromHex("#EFF6FF"), borderRadius: pw.BorderRadius.circular(10)),
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text("جمع کل فاکتور", style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10, color: PdfColor.fromHex("#0F4C81"))),
+                        pw.Divider(color: PdfColors.blue200),
+                        pw.Text("مبلغ نهایی: ${fmt(totalPrice)} تومان", style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold, color: PdfColor.fromHex("#0F4C81"))),
+                        if (description.isNotEmpty)
+                          pw.Padding(padding: const pw.EdgeInsets.only(top: 4), child: pw.Text("توضیحات: $description", style: const pw.TextStyle(fontSize: 8.5))),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            pw.Spacer(),
+            // فوتر، QR Code استعلام و امضای فروشگاه
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Row(
+                  children: [
+                    pw.BarcodeWidget(data: "https://promaxmobile.ir/verify?imei=$imei", barcode: pw.Barcode.qrCode(), width: 45, height: 45),
+                    pw.SizedBox(width: 8),
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text("اسکن کد QR", style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9)),
+                        pw.Text("جهت استعلام اصالت فاکتور و رجیستری", style: const pw.TextStyle(fontSize: 7.5, color: PdfColors.grey700)),
+                      ],
+                    ),
+                  ],
+                ),
+                pw.Column(
+                  children: [
+                    pw.Text("امضا و اثر انگشت خریدار", style: const pw.TextStyle(fontSize: 9)),
+                    pw.SizedBox(height: 25),
+                  ],
+                ),
+                pw.Column(
+                  children: [
+                    pw.Text("مهر و امضای فروشگاه پرومکس", style: const pw.TextStyle(fontSize: 9)),
+                    pw.SizedBox(height: 25),
+                  ],
+                ),
+              ],
+            ),
+            pw.SizedBox(height: 10),
+          ],
         ),
       ),
     );
