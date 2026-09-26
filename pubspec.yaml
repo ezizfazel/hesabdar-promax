@@ -17,6 +17,8 @@ dependencies:
   pdf: ^3.10.8
   printing: ^5.13.0
   shamsi_date: ^1.0.1
+  local_auth: ^2.3.0        # برای اثر انگشت و بیومتریک
+  flutter_secure_storage: ^9.0.0 # برای ذخیره امن رمز عبو
 
 flutter:
   uses-material-design: true
