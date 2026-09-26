@@ -186,7 +186,7 @@ class InvoiceHelper {
                     pw.BarcodeWidget(data: "https://promaxmobile.ir/verify?imei=$imei", barcode: pw.Barcode.qrCode(), width: 44, height: 44),
                     pw.SizedBox(width: 8),
                     pw.Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
                         pw.Text("اسکن کد QR", style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8.5)),
                         pw.Text("جهت استعلام اصالت فاکتور و رجیستری", style: const pw.TextStyle(fontSize: 7.5, color: PdfColors.grey700)),
