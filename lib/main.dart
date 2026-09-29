@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -13,7 +14,7 @@ import 'login_screen.dart';
 import 'invoice.dart';
 
 const String serverUrl = "https://promaxmobile.ir/api.php";
-const String appVersion = "2.3.0";
+const String appVersion = "2.3.1";
 const String developerName = "ezizfd";
 
 void main() {
@@ -21,6 +22,33 @@ void main() {
   runApp(const PromaxApp());
 }
 
+// کلاس ریشه برنامه فلاتر پرومکس
+class PromaxApp extends StatelessWidget {
+  const PromaxApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'حسابدار پرومکس',
+      debugShowCheckedModeBanner: false,
+      locale: const Locale('fa', 'IR'),
+      supportedLocales: const [Locale('fa', 'IR')],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      theme: ThemeData(
+        fontFamily: 'sans-serif',
+        scaffoldBackgroundColor: PromaxColors.background,
+        colorScheme: ColorScheme.fromSeed(seedColor: PromaxColors.blueAction),
+      ),
+      home: const LoginScreen(),
+    );
+  }
+}
+
+// ساختار هدر یکپارچه برای تمام صفحات
 class PromaxPageLayout extends StatelessWidget {
   final String title;
   final String adminName;
@@ -244,6 +272,7 @@ Widget _buildInput({
   );
 }
 
+// اسکنر دوربین بارکد
 class CameraScannerScreen extends StatefulWidget {
   const CameraScannerScreen({super.key});
 
@@ -332,6 +361,7 @@ Future<void> openSafeScanner(BuildContext context, Function(String) onFound) asy
   if (result != null && result is String) onFound(result);
 }
 
+// ناوبری اصلی همراه با دسترسی‌ها
 class MainNavigationScreen extends StatefulWidget {
   final Map<String, dynamic> adminData;
   const MainNavigationScreen({super.key, required this.adminData});
@@ -519,6 +549,48 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     );
   }
 
+  void _showEditProfileDialog() {
+    final nameCtl = TextEditingController(text: widget.adminData['full_name']);
+    final userCtl = TextEditingController(text: widget.adminData['username']);
+    final passCtl = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("ویرایش حساب من"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: nameCtl, decoration: const InputDecoration(labelText: "نام کامل")),
+            TextField(controller: userCtl, decoration: const InputDecoration(labelText: "نام کاربری")),
+            TextField(controller: passCtl, obscureText: true, decoration: const InputDecoration(labelText: "رمز عبور جدید (اختیاری)")),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("انصراف")),
+          FilledButton(
+            onPressed: () async {
+              final res = await http.post(
+                Uri.parse("$serverUrl?action=update_profile"),
+                headers: {"Content-Type": "application/json"},
+                body: jsonEncode({
+                  "admin_id": widget.adminData['id'],
+                  "full_name": nameCtl.text,
+                  "username": userCtl.text,
+                  "new_password": passCtl.text,
+                }),
+              );
+              final d = jsonDecode(res.body);
+              if (ctx.mounted) Navigator.pop(ctx);
+              if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(d['message'])));
+            },
+            child: const Text("ذخیره"),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final bool isSuperAdmin = widget.adminData['role'] == 'super_admin';
@@ -613,9 +685,17 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               child: ListView(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 children: [
+                  ListTile(
+                    leading: const Icon(Icons.badge_outlined, color: PromaxColors.blueAction),
+                    title: const Text("تغییر نام و پسورد من"),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _showEditProfileDialog();
+                    },
+                  ),
                   if (isSuperAdmin)
                     ListTile(
-                      leading: const Icon(Icons.admin_panel_settings, color: PromaxColors.blueAction),
+                      leading: const Icon(Icons.admin_panel_settings, color: PromaxColors.greenAction),
                       title: const Text("مدیریت دسترسی همکاران و تاریخچه"),
                       onTap: () {
                         Navigator.pop(context);
@@ -626,7 +706,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               child: ListTile(
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 tileColor: Colors.red.shade50,
@@ -719,7 +799,6 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
   };
 
   String selectedPeriodTitle = 'این ماه';
-  String chartScale = 'روزانه';
   bool loading = true;
   bool hasError = false;
   Map<String, dynamic>? data;
@@ -1073,17 +1152,6 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
                           ],
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      _buildSalesAndProfitLineChart(),
-                      const SizedBox(height: 16),
-                      _buildBrandDonutChart(),
-                      const SizedBox(height: 16),
-                      _buildWeeklyBarChart(),
-                      const SizedBox(height: 16),
-                      _buildLowStockTable(),
-                      const SizedBox(height: 16),
-                      _buildRecentActivitiesAndAiSummary(),
-                      const SizedBox(height: 20),
                     ],
                   ),
                 ),
@@ -1108,370 +1176,9 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
       ),
     );
   }
-
-  Widget _buildSalesAndProfitLineChart() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: PromaxColors.fieldBorder)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Row(
-                children: [
-                  Icon(Icons.stacked_line_chart_rounded, color: PromaxColors.blueAction, size: 20),
-                  SizedBox(width: 8),
-                  Text("مقایسه فروش و سود", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                ],
-              ),
-              Row(
-                children: ['روزانه', 'هفتگی', 'ماهانه'].map((s) {
-                  final isSel = chartScale == s;
-                  return GestureDetector(
-                    onTap: () => setState(() => chartScale = s),
-                    child: Container(
-                      margin: const EdgeInsets.only(left: 4),
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(color: isSel ? PromaxColors.blueAction : Colors.transparent, borderRadius: BorderRadius.circular(8)),
-                      child: Text(s, style: TextStyle(fontSize: 10, color: isSel ? Colors.white : PromaxColors.textMuted, fontWeight: isSel ? FontWeight.bold : FontWeight.normal)),
-                    ),
-                  );
-                }).toList(),
-              )
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              _legendItem("فروش", const Color(0xFF2563EB)),
-              const SizedBox(width: 14),
-              _legendItem("سود", const Color(0xFF10B981)),
-            ],
-          ),
-          const SizedBox(height: 16),
-          SizedBox(height: 150, width: double.infinity, child: CustomPaint(painter: SmoothLineChartPainter())),
-          const SizedBox(height: 8),
-          const Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text("۱ تا ۷", style: TextStyle(fontSize: 9.5, color: PromaxColors.textMuted)),
-              Text("۸ تا ۱۴", style: TextStyle(fontSize: 9.5, color: PromaxColors.textMuted)),
-              Text("۱۵ تا ۲۱", style: TextStyle(fontSize: 9.5, color: PromaxColors.textMuted)),
-              Text("۲۲ تا ۲۸", style: TextStyle(fontSize: 9.5, color: PromaxColors.textMuted)),
-              Text("۲۹ تا آخر", style: TextStyle(fontSize: 9.5, color: PromaxColors.textMuted)),
-            ],
-          )
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBrandDonutChart() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: PromaxColors.fieldBorder)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.pie_chart_outline_rounded, color: PromaxColors.blueAction, size: 20),
-                  SizedBox(width: 8),
-                  Text("فروش بر اساس برند", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                ],
-              ),
-              Text("مشاهده همه ←", style: TextStyle(fontSize: 10.5, color: PromaxColors.blueAction, fontWeight: FontWeight.bold)),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                flex: 5,
-                child: SizedBox(
-                  height: 140,
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      CustomPaint(size: const Size(140, 140), painter: DonutChartPainter()),
-                      const Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text("کل فروش", style: TextStyle(fontSize: 9.5, color: PromaxColors.textMuted)),
-                          Text("۳.۲۵B", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                flex: 6,
-                child: Column(
-                  children: [
-                    _brandShareRow("اپل", "۴۲٪", const Color(0xFF2563EB)),
-                    _brandShareRow("سامسونگ", "۲۸٪", const Color(0xFF6366F1)),
-                    _brandShareRow("شیائومی", "۱۲٪", const Color(0xFFF97316)),
-                    _brandShareRow("آنر", "۶٪", const Color(0xFF06B6D4)),
-                    _brandShareRow("هواوی", "۵٪", const Color(0xFFEC4899)),
-                    _brandShareRow("سایر", "۷٪", const Color(0xFF94A3B8)),
-                  ],
-                ),
-              )
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _brandShareRow(String name, String percent, Color color) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-              const SizedBox(width: 6),
-              Text(name, style: const TextStyle(fontSize: 11)),
-            ],
-          ),
-          Text(percent, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildWeeklyBarChart() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: PromaxColors.fieldBorder)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Row(
-                children: [
-                  Icon(Icons.bar_chart_rounded, color: PromaxColors.blueAction, size: 20),
-                  SizedBox(width: 8),
-                  Text("مقایسه سود و فروش (ماه جاری)", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                ],
-              ),
-              Row(
-                children: [
-                  _legendItem("فروش", const Color(0xFF3B82F6)),
-                  const SizedBox(width: 8),
-                  _legendItem("سود", const Color(0xFF10B981)),
-                ],
-              )
-            ],
-          ),
-          const SizedBox(height: 18),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              _barGroup("هفته ۱", 90, 45),
-              _barGroup("هفته ۲", 110, 60),
-              _barGroup("هفته ۳", 135, 75),
-              _barGroup("هفته ۴", 120, 65),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _barGroup(String week, double h1, double h2) {
-    return Column(
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Container(width: 14, height: h1, decoration: BoxDecoration(color: const Color(0xFF3B82F6), borderRadius: BorderRadius.circular(4))),
-            const SizedBox(width: 4),
-            Container(width: 14, height: h2, decoration: BoxDecoration(color: const Color(0xFF10B981), borderRadius: BorderRadius.circular(4))),
-          ],
-        ),
-        const SizedBox(height: 6),
-        Text(week, style: const TextStyle(fontSize: 9.5, color: PromaxColors.textMuted)),
-      ],
-    );
-  }
-
-  Widget _buildLowStockTable() {
-    final items = [
-      {"model": "iPhone 16 Pro 256GB", "stock": "۱", "min": "۳", "status": "نیاز به خرید", "color": Colors.red},
-      {"model": "Samsung S25 Ultra 512GB", "stock": "۲", "min": "۵", "status": "نیاز به خرید", "color": Colors.red},
-      {"model": "iPhone 15 128GB", "stock": "۲", "min": "۴", "status": "نیاز به خرید", "color": Colors.red},
-      {"model": "AirPods Pro 2", "stock": "۳", "min": "۸", "status": "نیاز به خرید", "color": Colors.red},
-      {"model": "Xiaomi 14 256GB", "stock": "۴", "min": "۱۰", "status": "نزدیک به اتمام", "color": Colors.amber.shade800},
-    ];
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: PromaxColors.fieldBorder)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.warning_amber_rounded, color: Colors.red, size: 20),
-                  SizedBox(width: 8),
-                  Text("کالاهای کم‌موجودی", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.red)),
-                ],
-              ),
-              Text("مشاهده همه ←", style: TextStyle(fontSize: 10.5, color: PromaxColors.blueAction, fontWeight: FontWeight.bold)),
-            ],
-          ),
-          const SizedBox(height: 12),
-          const Row(
-            children: [
-              Expanded(flex: 4, child: Text("مدل دستگاه", style: TextStyle(fontSize: 10, color: PromaxColors.textMuted))),
-              Expanded(flex: 2, child: Center(child: Text("موجودی", style: TextStyle(fontSize: 10, color: PromaxColors.textMuted)))),
-              Expanded(flex: 2, child: Center(child: Text("حداقل", style: TextStyle(fontSize: 10, color: PromaxColors.textMuted)))),
-              Expanded(flex: 3, child: Center(child: Text("وضعیت", style: TextStyle(fontSize: 10, color: PromaxColors.textMuted)))),
-            ],
-          ),
-          const Divider(height: 14),
-          ...items.map((it) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 5),
-                child: Row(
-                  children: [
-                    Expanded(flex: 4, child: Text(it['model'] as String, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold))),
-                    Expanded(flex: 2, child: Center(child: Text(it['stock'] as String, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)))),
-                    Expanded(flex: 2, child: Center(child: Text(it['min'] as String, style: const TextStyle(fontSize: 11, color: PromaxColors.textMuted)))),
-                    Expanded(
-                      flex: 3,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 2),
-                        decoration: BoxDecoration(color: (it['color'] as Color).withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
-                        child: Center(
-                          child: Text(it['status'] as String, style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: it['color'] as Color)),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              )),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRecentActivitiesAndAiSummary() {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF0FDF4),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFFBBF7D0)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Row(
-                    children: [
-                      Icon(Icons.auto_awesome, color: Color(0xFF16A34A), size: 18),
-                      SizedBox(width: 8),
-                      Text("تحلیل هوشمند فروش پرومکس", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5, color: Color(0xFF15803D))),
-                    ],
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(color: Colors.green.shade200, borderRadius: BorderRadius.circular(10)),
-                    child: const Text("دستیار هوشمند", style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF14532D))),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              const Text(
-                "• در این ماه فروش نسبت به ماه قبل ۲۴٪ افزایش داشته است.\n• بیشترین فروش و سود مربوط به برند اپل بوده است.\n• ۵ مدل به حداقل موجودی رسیده‌اند و نیاز به شارژ انبار دارند.",
-                style: TextStyle(fontSize: 11, height: 1.6, color: Color(0xFF166534)),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _legendItem(String title, Color color) {
-    return Row(
-      children: [
-        Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-        const SizedBox(width: 5),
-        Text(title, style: const TextStyle(fontSize: 10, color: PromaxColors.textMuted)),
-      ],
-    );
-  }
 }
 
-class SmoothLineChartPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final p1 = Paint()..color = const Color(0xFF2563EB)..strokeWidth = 2.5..style = PaintingStyle.stroke;
-    final p2 = Paint()..color = const Color(0xFF10B981)..strokeWidth = 2.5..style = PaintingStyle.stroke;
-    final path1 = Path();
-    final path2 = Path();
-
-    path1.moveTo(0, size.height * 0.7);
-    path1.cubicTo(size.width * 0.25, size.height * 0.4, size.width * 0.4, size.height * 0.6, size.width * 0.5, size.height * 0.3);
-    path1.cubicTo(size.width * 0.7, size.height * 0.8, size.width * 0.85, size.height * 0.35, size.width, size.height * 0.2);
-
-    path2.moveTo(0, size.height * 0.85);
-    path2.cubicTo(size.width * 0.25, size.height * 0.65, size.width * 0.4, size.height * 0.8, size.width * 0.5, size.height * 0.55);
-    path2.cubicTo(size.width * 0.7, size.height * 0.9, size.width * 0.85, size.height * 0.6, size.width, size.height * 0.5);
-
-    canvas.drawPath(path1, p1);
-    canvas.drawPath(path2, p2);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-class DonutChartPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final rect = Rect.fromLTWH(0, 0, size.width, size.height);
-    final paint = Paint()..style = PaintingStyle.stroke..strokeWidth = 18;
-    paint.color = const Color(0xFF2563EB);
-    canvas.drawArc(rect, -1.57, 2.6, false, paint);
-    paint.color = const Color(0xFF6366F1);
-    canvas.drawArc(rect, 1.05, 1.7, false, paint);
-    paint.color = const Color(0xFFF97316);
-    canvas.drawArc(rect, 2.8, 0.7, false, paint);
-    paint.color = const Color(0xFF06B6D4);
-    canvas.drawArc(rect, 3.55, 0.4, false, paint);
-    paint.color = const Color(0xFFEC4899);
-    canvas.drawArc(rect, 4.0, 0.3, false, paint);
-    paint.color = const Color(0xFF94A3B8);
-    canvas.drawArc(rect, 4.35, 0.4, false, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
+// ==================== بخش انبار با دکمه‌های کپسولی ====================
 class InventoryAndReportsScreen extends StatefulWidget {
   final Map<String, dynamic> adminData;
   final VoidCallback openDrawer;
@@ -1743,6 +1450,7 @@ class _InventoryAndReportsScreenState extends State<InventoryAndReportsScreen> {
   }
 }
 
+// ==================== صفحه خرید گوشی ====================
 class BuyPhoneScreen extends StatefulWidget {
   final Map<String, dynamic> adminData;
   final VoidCallback openDrawer;
@@ -1876,7 +1584,7 @@ class _BuyPhoneScreenState extends State<BuyPhoneScreen> {
               child: DropdownButton<String>(
                 value: selectedBrand,
                 isExpanded: true,
-                items: popularBrands.map((b) => DropdownMenuItem(value: b, child: Text(b, style: const TextStyle(fontSize: 13)))).toList(),
+                items: popularBrands.map((b) => DropdownMenuItem(value: b, child: Text("برند: $b", style: const TextStyle(fontSize: 13)))).toList(),
                 onChanged: (v) => setState(() => selectedBrand = v!),
               ),
             ),
@@ -1937,6 +1645,7 @@ class _BuyPhoneScreenState extends State<BuyPhoneScreen> {
   }
 }
 
+// ==================== صفحه فروش گوشی با تقویم شمسی موعد قرض ====================
 class SellPhoneScreen extends StatefulWidget {
   final Map<String, dynamic> adminData;
   final VoidCallback openDrawer;
@@ -2177,6 +1886,7 @@ class _SellPhoneScreenState extends State<SellPhoneScreen> {
   }
 }
 
+// ==================== صفحه لوازم جانبی با فروش توافقی و تخفیف‌دار ====================
 class AccessoriesScreen extends StatefulWidget {
   final Map<String, dynamic> adminData;
   final VoidCallback openDrawer;
@@ -2338,23 +2048,29 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text("فروش سریع: ${item['name']}"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text("موجودی: ${item['stock']} عدد | قیمت: ${formatToman(item['sale_price'])} ت"),
-            TextField(controller: qtyCtl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: "تعداد فروش")),
-            TextField(
-              controller: customPriceCtl,
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly, CurrencyInputFormatter()],
-              decoration: const InputDecoration(
-                labelText: "قیمت نهایی فروش (تومان)",
-                helperText: "در صورت تخفیف دادن مبلغ را تغییر دهید",
+        title: Text("فروش کالای: ${item['name']}"),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text("موجودی فعلی در انبار: ${item['stock']} عدد", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: PromaxColors.textMuted)),
+              const SizedBox(height: 10),
+              TextField(controller: qtyCtl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: "تعداد فروش", border: OutlineInputBorder())),
+              const SizedBox(height: 10),
+              TextField(
+                controller: customPriceCtl,
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly, CurrencyInputFormatter()],
+                decoration: const InputDecoration(
+                  labelText: "قیمت نهایی هر عدد با تخفیف (تومان)",
+                  helperText: "در صورت تخفیف دادن مبلغ نهایی را اینجا وارد کنید",
+                  border: OutlineInputBorder(),
+                ),
               ),
-            ),
-            TextField(controller: buyerCtl, decoration: const InputDecoration(labelText: "نام خریدار (اختیاری)")),
-          ],
+              const SizedBox(height: 10),
+              TextField(controller: buyerCtl, decoration: const InputDecoration(labelText: "نام مشتری (اختیاری)", border: OutlineInputBorder())),
+            ],
+          ),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("انصراف")),
@@ -2375,7 +2091,7 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
               if (ctx.mounted) Navigator.pop(ctx);
               load();
             },
-            child: const Text("ثبت فروش"),
+            child: const Text("ثبت فروش و کسر از انبار"),
           ),
         ],
       ),
@@ -2402,7 +2118,7 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
                   FilledButton.icon(
                     onPressed: _showAddDialog,
                     icon: const Icon(Icons.add),
-                    label: const Text("افزودن کالای جانبی به انبار"),
+                    label: const Text("افزودن کالای جانبی جدید"),
                     style: FilledButton.styleFrom(backgroundColor: PromaxColors.blueAction, minimumSize: const Size.fromHeight(50)),
                   ),
                   const SizedBox(height: 16),
@@ -2414,16 +2130,10 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
                         leading: const CircleAvatar(backgroundColor: Color(0xFFEFF6FF), child: Icon(Icons.headphones, color: PromaxColors.blueAction)),
                         title: Text(item['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                         subtitle: Text("موجودی: $currentStock | خرید: ${formatToman(item['buy_price'])} | فروش مصوب: ${formatToman(item['sale_price'])} ت", style: const TextStyle(fontSize: 10.5)),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(icon: const Icon(Icons.edit, size: 20, color: Colors.blueGrey), onPressed: () => _showEditAccessoryDialog(item)),
-                            ElevatedButton(
-                              onPressed: currentStock > 0 ? () => _showSellDialog(item) : null,
-                              style: ElevatedButton.styleFrom(backgroundColor: PromaxColors.greenAction, foregroundColor: Colors.white),
-                              child: const Text("فروش"),
-                            ),
-                          ],
+                        trailing: ElevatedButton(
+                          onPressed: currentStock > 0 ? () => _showSellDialog(item) : null,
+                          style: ElevatedButton.styleFrom(backgroundColor: PromaxColors.greenAction, foregroundColor: Colors.white),
+                          child: const Text("فروش"),
                         ),
                       ),
                     );
