@@ -14,7 +14,7 @@ import 'package:shimmer/shimmer.dart';
 import 'invoice.dart';
 
 const String serverUrl = "https://promaxmobile.ir/api.php";
-const String appVersion = "1.8.5";
+const String appVersion = "1.9.0";
 const String developerName = "ezizfd";
 
 const List<String> popularBrands = [
@@ -135,11 +135,11 @@ class PromaxSkeletonLoading extends StatelessWidget {
       highlightColor: Colors.grey.shade100,
       child: ListView.builder(
         padding: const EdgeInsets.all(20),
-        itemCount: 5,
+        itemCount: 4,
         itemBuilder: (_, __) => Padding(
           padding: const EdgeInsets.only(bottom: 16.0),
           child: Container(
-            height: 125,
+            height: 120,
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(20),
@@ -1128,6 +1128,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   Widget build(BuildContext context) {
     final bool isSuperAdmin = widget.adminData['role'] == 'super_admin';
 
+    // هماهنگی دقیق نام کلاس صفحه انبار با نام ویجت (InventoryAndReportsScreen)
     final List<Widget> accessiblePages = [
       hasAccess('analytics')
           ? AnalyticsDashboardScreen(
@@ -1327,6 +1328,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   }
 }
 
+// صفحه آمار و تحلیل مالی
 class AnalyticsDashboardScreen extends StatefulWidget {
   final Map<String, dynamic> adminData;
   final VoidCallback openDrawer;
@@ -2070,6 +2072,247 @@ class DonutChartPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
+// صفحه انبار با تفکیک تب‌های موجودی و فروخته‌شده
+class InventoryAndReportsScreen extends StatefulWidget {
+  final Map<String, dynamic> adminData;
+  final VoidCallback openDrawer;
+  final VoidCallback onNotificationTap;
+  final VoidCallback onSecurityTap;
+  final int notificationCount;
+  const InventoryAndReportsScreen({super.key, required this.adminData, required this.openDrawer, required this.onNotificationTap, required this.onSecurityTap, required this.notificationCount});
+
+  @override
+  State<InventoryAndReportsScreen> createState() => _InventoryAndReportsScreenState();
+}
+
+class _InventoryAndReportsScreenState extends State<InventoryAndReportsScreen> {
+  List<dynamic> allPhones = [];
+  String searchQuery = "";
+  int inventoryTabIndex = 0; // ۰: موجود در انبار | ۱: فروخته‌شده‌ها
+  bool loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    load();
+  }
+
+  Future<void> load() async {
+    setState(() => loading = true);
+    try {
+      final resPhones = await http.get(Uri.parse("$serverUrl?action=get_all_phones"));
+      if (resPhones.statusCode == 200) {
+        setState(() {
+          allPhones = jsonDecode(resPhones.body)['data'];
+          loading = false;
+        });
+      }
+    } catch (_) {
+      setState(() => loading = false);
+    }
+  }
+
+  void _showEditOrderDialog(Map<String, dynamic> item) {
+    String selectedBrand = popularBrands.contains(item['brand']) ? item['brand'] : popularBrands[0];
+    final modelCtl = TextEditingController(text: item['model']);
+    final imeiCtl = TextEditingController(text: item['imei']);
+    final imei2Ctl = TextEditingController(text: item['imei2'] ?? '');
+    final priceCtl = TextEditingController(text: item['status'] == 'SOLD' ? item['sale_price'].toString() : item['purchase_price'].toString());
+    final buyerCtl = TextEditingController(text: item['buyer_name'] ?? '');
+    final phoneCtl = TextEditingController(text: item['buyer_phone'] ?? '');
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDState) => AlertDialog(
+          title: const Text("ویرایش کامل محصول"),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButtonFormField<String>(
+                  value: selectedBrand,
+                  decoration: const InputDecoration(labelText: "برند دستگاه", border: OutlineInputBorder()),
+                  items: popularBrands.map((b) => DropdownMenuItem(value: b, child: Text(b, style: const TextStyle(fontSize: 12)))).toList(),
+                  onChanged: (v) => setDState(() => selectedBrand = v!),
+                ),
+                const SizedBox(height: 10),
+                TextField(controller: modelCtl, decoration: const InputDecoration(labelText: "مدل دستگاه", border: OutlineInputBorder())),
+                const SizedBox(height: 10),
+                TextField(controller: imeiCtl, decoration: const InputDecoration(labelText: "IMEI 1", border: OutlineInputBorder())),
+                const SizedBox(height: 10),
+                TextField(controller: imei2Ctl, decoration: const InputDecoration(labelText: "IMEI 2", border: OutlineInputBorder())),
+                const SizedBox(height: 10),
+                TextField(controller: priceCtl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: "مبلغ (تومان)", border: OutlineInputBorder())),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("انصراف")),
+            FilledButton(
+              onPressed: () async {
+                await http.post(
+                  Uri.parse("$serverUrl?action=update_order"),
+                  headers: {"Content-Type": "application/json"},
+                  body: jsonEncode({
+                    "phone_id": item['id'],
+                    "brand": selectedBrand,
+                    "model": modelCtl.text,
+                    "imei": imeiCtl.text,
+                    "imei2": imei2Ctl.text,
+                    "price": int.tryParse(priceCtl.text.replaceAll(',', '')) ?? 0,
+                    "buyer_name": buyerCtl.text,
+                    "buyer_phone": phoneCtl.text,
+                  }),
+                );
+                if (ctx.mounted) Navigator.pop(ctx);
+                load();
+              },
+              child: const Text("ذخیره"),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void showDetailsModal(Map<String, dynamic> item) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(24),
+        decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(10)))),
+              const SizedBox(height: 16),
+              Text("${item['brand']} ${item['model']}", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const Divider(height: 24),
+              _row("نام فروشنده:", "${item['seller_name'] ?? 'متفرقه'}"),
+              _row("شماره تماس فروشنده:", "${item['seller_phone'] ?? '-'}"),
+              _row("کد ملی فروشنده:", "${item['seller_nid'] ?? '-'}"),
+              _row("قیمت خرید:", "${formatToman(item['purchase_price'])} تومان"),
+              _row("سریال IMEI 1:", "${item['imei']}"),
+              if (item['imei2'] != null) _row("سریال IMEI 2:", "${item['imei2']}"),
+              _row("وضعیت رجیستری:", "${item['registry_status']}"),
+              if (item['status'] == 'SOLD') ...[
+                const Divider(),
+                _row("نام خریدار:", "${item['buyer_name']} (${item['buyer_phone']})"),
+                _row("قیمت فروش:", "${formatToman(item['sale_price'])} تومان"),
+                _row("روش تسویه:", "${item['payment_method']}"),
+                _row("مانده طلب:", "${formatToman(item['remaining_amount'])} تومان"),
+              ],
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  _showEditOrderDialog(item);
+                },
+                icon: const Icon(Icons.edit),
+                label: const Text("ویرایش کامل کالا"),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _row(String t, String v) => Padding(padding: const EdgeInsets.symmetric(vertical: 3), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(t, style: const TextStyle(fontSize: 11.5, color: PromaxColors.textMuted)), Text(v, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold))]));
+
+  @override
+  Widget build(BuildContext context) {
+    if (loading) return const PromaxSkeletonLoading();
+
+    final filtered = allPhones.where((item) {
+      final isMatchStatus = inventoryTabIndex == 0 ? item['status'] == 'IN_STOCK' : item['status'] == 'SOLD';
+      final q = searchQuery.toLowerCase();
+      final isMatchQuery = (item['imei']?.toString().toLowerCase().contains(q) ?? false) ||
+          (item['brand']?.toString().toLowerCase().contains(q) ?? false) ||
+          (item['model']?.toString().toLowerCase().contains(q) ?? false) ||
+          (item['seller_name']?.toString().toLowerCase().contains(q) ?? false) ||
+          (item['buyer_name']?.toString().toLowerCase().contains(q) ?? false);
+      return isMatchStatus && isMatchQuery;
+    }).toList();
+
+    return PromaxPageLayout(
+      title: "انبار موبایل پرومکس",
+      adminName: widget.adminData['full_name'],
+      subtitle: "تفکیک کامل موجودی‌ها و دستگاه‌های فروخته‌شده",
+      openDrawer: widget.openDrawer,
+      onNotificationTap: widget.onNotificationTap,
+      onSecurityTap: widget.onSecurityTap,
+      notificationCount: widget.notificationCount,
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: TextField(
+              onChanged: (v) => setState(() => searchQuery = v),
+              decoration: InputDecoration(
+                hintText: "جستجو با نام فروشنده، خریدار، کد ملی، مدل و IMEI...",
+                prefixIcon: const Icon(Icons.search),
+                filled: true, fillColor: Colors.white,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: PromaxColors.fieldBorder)),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: ChoiceChip(
+                    label: const Center(child: Text("موجودی انبار")),
+                    selected: inventoryTabIndex == 0,
+                    selectedColor: PromaxColors.blueAction,
+                    onSelected: (_) => setState(() => inventoryTabIndex = 0),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: ChoiceChip(
+                    label: const Center(child: Text("فروخته‌شده‌ها")),
+                    selected: inventoryTabIndex == 1,
+                    selectedColor: PromaxColors.greenAction,
+                    onSelected: (_) => setState(() => inventoryTabIndex = 1),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: filtered.length,
+              itemBuilder: (context, idx) {
+                final item = filtered[idx];
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  child: ListTile(
+                    onTap: () => showDetailsModal(item),
+                    title: Text("${item['brand']} ${item['model']}", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    subtitle: Text("فروشنده: ${item['seller_name'] ?? 'متفرقه'} (کد ملی: ${item['seller_nid'] ?? '-'})\nIMEI: ${item['imei']}", style: const TextStyle(fontSize: 10.5, color: PromaxColors.textMuted)),
+                    trailing: Text("${formatToman(item['status'] == 'IN_STOCK' ? item['purchase_price'] : item['sale_price'])} ت", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// صفحه خرید گوشی
 class BuyPhoneScreen extends StatefulWidget {
   final Map<String, dynamic> adminData;
   final VoidCallback openDrawer;
@@ -2131,7 +2374,7 @@ class _BuyPhoneScreenState extends State<BuyPhoneScreen> {
         context,
         MaterialPageRoute(
           builder: (_) => Scaffold(
-            appBar: AppBar(title: const Text("پیش‌‌نمایش فاکتور رسمی")),
+            appBar: AppBar(title: const Text("پیش‌نمایش فاکتور رسمی")),
             body: PdfPreview(
               build: (format) => InvoiceHelper.createInvoice(
                 title: "رسید خرید کالا",
@@ -2264,6 +2507,7 @@ class _BuyPhoneScreenState extends State<BuyPhoneScreen> {
   }
 }
 
+// صفحه فروش گوشی با تقویم شمسی موعد قرض
 class SellPhoneScreen extends StatefulWidget {
   final Map<String, dynamic> adminData;
   final VoidCallback openDrawer;
@@ -2437,6 +2681,26 @@ class _SellPhoneScreenState extends State<SellPhoneScreen> {
             decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: PromaxColors.fieldBorder, width: 1.2)),
             child: DropdownButtonHideUnderline(
               child: DropdownButton<String>(
+                value: selectedRegistry,
+                isExpanded: true,
+                items: registryOptions.map((r) => DropdownMenuItem(value: r, child: Text("انتقال مالکیت / رجیستری: $r", style: const TextStyle(fontSize: 13)))).toList(),
+                onChanged: (v) => setState(() => selectedRegistry = v!),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          CheckboxListTile(
+            value: hamtaVerified,
+            activeColor: PromaxColors.greenAction,
+            title: const Text("تست اصالت و رجیستری انجام شد", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+            onChanged: (v) => setState(() => hamtaVerified = v!),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: PromaxColors.fieldBorder, width: 1.2)),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
                 value: selectedMethod,
                 isExpanded: true,
                 items: ['نقدی', 'قسطی', 'چکی', 'قرضی'].map((m) => DropdownMenuItem<String>(value: m, child: Text("روش تسویه: $m", style: const TextStyle(fontSize: 13)))).toList(),
@@ -2484,6 +2748,7 @@ class _SellPhoneScreenState extends State<SellPhoneScreen> {
   }
 }
 
+// صفحه لوازم جانبی با اسکن بارکد و ویرایش کامل
 class AccessoriesScreen extends StatefulWidget {
   final Map<String, dynamic> adminData;
   final VoidCallback openDrawer;
