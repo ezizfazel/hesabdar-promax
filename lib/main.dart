@@ -10,6 +10,7 @@ import 'package:qr_code_scanner_plus/qr_code_scanner_plus.dart';
 import 'package:shamsi_date/shamsi_date.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'invoice.dart';
 
 const String serverUrl = "https://promaxmobile.ir/api.php";
@@ -272,14 +273,14 @@ class _PromaxProgressLoadingState extends State<PromaxProgressLoading>
   }
 }
 
-// ساختار هدر یکپارچه
+// ساختار هدر یکپارچه با محدودسازی دکمه امنیت تنها برای سوپرادمین
 class PromaxPageLayout extends StatelessWidget {
   final String title;
   final String adminName;
   final String subtitle;
   final VoidCallback openDrawer;
   final VoidCallback onNotificationTap;
-  final VoidCallback onSecurityTap;
+  final VoidCallback? onSecurityTap;
   final int notificationCount;
   final Widget body;
 
@@ -290,7 +291,7 @@ class PromaxPageLayout extends StatelessWidget {
     required this.subtitle,
     required this.openDrawer,
     required this.onNotificationTap,
-    required this.onSecurityTap,
+    this.onSecurityTap,
     required this.notificationCount,
     required this.body,
   });
@@ -344,19 +345,21 @@ class PromaxPageLayout extends StatelessWidget {
                 ),
                 Row(
                   children: [
-                    GestureDetector(
-                      onTap: onSecurityTap,
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.12),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.white24),
+                    if (onSecurityTap != null) ...[
+                      GestureDetector(
+                        onTap: onSecurityTap,
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.white24),
+                          ),
+                          child: const Icon(Icons.security_rounded, color: Colors.white, size: 22),
                         ),
-                        child: const Icon(Icons.security_rounded, color: Colors.white, size: 22),
                       ),
-                    ),
-                    const SizedBox(width: 8),
+                      const SizedBox(width: 8),
+                    ],
                     GestureDetector(
                       onTap: onNotificationTap,
                       child: Stack(
@@ -889,11 +892,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(10)),
-              ),
+              child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(10))),
             ),
             const SizedBox(height: 14),
             Row(
@@ -955,6 +954,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     );
   }
 
+  // پنل مدیریت دسترسی‌ها، افزودن و حذف ادمین (مخصوص سوپرادمین)
   void _showAdminManagementPanel() async {
     final res = await http.get(Uri.parse("$serverUrl?action=get_admins"));
     final logRes = await http.get(Uri.parse("$serverUrl?action=get_logs"));
@@ -972,21 +972,16 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         builder: (context, setPanelState) => Container(
           height: MediaQuery.of(context).size.height * 0.85,
           padding: const EdgeInsets.all(20),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-          ),
+          decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
           child: DefaultTabController(
             length: 2,
             child: Column(
               children: [
-                Center(
-                  child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(10))),
-                ),
+                Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(10)))),
                 const SizedBox(height: 12),
                 const TabBar(
                   tabs: [
-                    Tab(icon: Icon(Icons.manage_accounts), text: "مدیریت دسترسی همکاران"),
+                    Tab(icon: Icon(Icons.manage_accounts), text: "مدیریت و دسترسی همکاران"),
                     Tab(icon: Icon(Icons.history), text: "تاریخچه فعالیت‌ها"),
                   ],
                 ),
@@ -996,6 +991,17 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                       ListView(
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         children: [
+                          FilledButton.icon(
+                            onPressed: () {
+                              _showCreateAdminDialog(() async {
+                                final r = await http.get(Uri.parse("$serverUrl?action=get_admins"));
+                                setPanelState(() => adminsList = jsonDecode(r.body)['data']);
+                              });
+                            },
+                            icon: const Icon(Icons.person_add),
+                            label: const Text("افزودن همکار جدید با دسترسی دلخواه"),
+                          ),
+                          const SizedBox(height: 12),
                           ...adminsList.map((a) {
                             final perms = a['permissions']?.toString().split(',') ?? [];
                             final isSuper = a['role'] == 'super_admin';
@@ -1007,12 +1013,26 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                                 subtitle: Text(isSuper ? "مدیر کل (دسترسی کامل)" : "دسترسی‌ها: ${perms.join('، ')}", style: const TextStyle(fontSize: 10.5)),
                                 trailing: isSuper
                                     ? null
-                                    : IconButton(
-                                        icon: const Icon(Icons.edit_attributes_rounded, color: PromaxColors.blueAction),
-                                        onPressed: () => _editAdminPermissionsDialog(a, () async {
-                                          final r = await http.get(Uri.parse("$serverUrl?action=get_admins"));
-                                          setPanelState(() => adminsList = jsonDecode(r.body)['data']);
-                                        }),
+                                    : Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          IconButton(
+                                            tooltip: "تغییر دسترسی",
+                                            icon: const Icon(Icons.edit_attributes_rounded, color: PromaxColors.blueAction),
+                                            onPressed: () => _editAdminPermissionsDialog(a, () async {
+                                              final r = await http.get(Uri.parse("$serverUrl?action=get_admins"));
+                                              setPanelState(() => adminsList = jsonDecode(r.body)['data']);
+                                            }),
+                                          ),
+                                          IconButton(
+                                            tooltip: "حذف همکار",
+                                            icon: const Icon(Icons.delete_outline, color: Colors.red),
+                                            onPressed: () => _deleteAdminDialog(a, () async {
+                                              final r = await http.get(Uri.parse("$serverUrl?action=get_admins"));
+                                              setPanelState(() => adminsList = jsonDecode(r.body)['data']);
+                                            }),
+                                          ),
+                                        ],
                                       ),
                               ),
                             );
@@ -1044,6 +1064,91 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     );
   }
 
+  void _showCreateAdminDialog(VoidCallback onCreated) {
+    final nameCtl = TextEditingController();
+    final userCtl = TextEditingController();
+    final passCtl = TextEditingController();
+    List<String> perms = ['accessories'];
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDState) => AlertDialog(
+          title: const Text("افزودن همکار با سطح دسترسی"),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(controller: nameCtl, decoration: const InputDecoration(labelText: "نام کامل همکار")),
+                TextField(controller: userCtl, decoration: const InputDecoration(labelText: "نام کاربری")),
+                TextField(controller: passCtl, decoration: const InputDecoration(labelText: "کلمه عبور")),
+                const Divider(),
+                const Text("بخش‌های مجاز برای این همکار:", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
+                CheckboxListTile(title: const Text("داشبورد و آمار"), value: perms.contains('analytics'), onChanged: (v) => setDState(() => v! ? perms.add('analytics') : perms.remove('analytics'))),
+                CheckboxListTile(title: const Text("خرید گوشی"), value: perms.contains('buy'), onChanged: (v) => setDState(() => v! ? perms.add('buy') : perms.remove('buy'))),
+                CheckboxListTile(title: const Text("فروش گوشی"), value: perms.contains('sell'), onChanged: (v) => setDState(() => v! ? perms.add('sell') : perms.remove('sell'))),
+                CheckboxListTile(title: const Text("انبار گوشی"), value: perms.contains('inventory'), onChanged: (v) => setDState(() => v! ? perms.add('inventory') : perms.remove('inventory'))),
+                CheckboxListTile(title: const Text("اکسسوری"), value: perms.contains('accessories'), onChanged: (v) => setDState(() => v! ? perms.add('accessories') : perms.remove('accessories'))),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("انصراف")),
+            FilledButton(
+              onPressed: () async {
+                if (userCtl.text.isEmpty || passCtl.text.isEmpty) return;
+                await http.post(
+                  Uri.parse("$serverUrl?action=create_admin"),
+                  headers: {"Content-Type": "application/json"},
+                  body: jsonEncode({
+                    "requester_role": widget.adminData['role'],
+                    "full_name": nameCtl.text,
+                    "username": userCtl.text,
+                    "password": passCtl.text,
+                    "permissions": perms.join(','),
+                  }),
+                );
+                if (ctx.mounted) Navigator.pop(ctx);
+                onCreated();
+              },
+              child: const Text("ثبت همکار"),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _deleteAdminDialog(Map<String, dynamic> admin, VoidCallback onDeleted) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("حذف همکار", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+        content: Text("آیا از حذف کامل حساب کاربری ${admin['full_name']} اطمینان دارید؟"),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("انصراف")),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () async {
+              await http.post(
+                Uri.parse("$serverUrl?action=delete_admin"),
+                headers: {"Content-Type": "application/json"},
+                body: jsonEncode({
+                  "requester_role": widget.adminData['role'],
+                  "admin_id": admin['id'],
+                  "admin_name": admin['full_name'],
+                }),
+              );
+              if (ctx.mounted) Navigator.pop(ctx);
+              onDeleted();
+            },
+            child: const Text("حذف قطعی"),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _editAdminPermissionsDialog(Map<String, dynamic> admin, VoidCallback onUpdated) {
     List<String> perms = admin['permissions']?.toString().split(',') ?? [];
     showDialog(
@@ -1068,7 +1173,12 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                 await http.post(
                   Uri.parse("$serverUrl?action=update_admin_permissions"),
                   headers: {"Content-Type": "application/json"},
-                  body: jsonEncode({"admin_id": admin['id'], "permissions": perms.join(',')}),
+                  body: jsonEncode({
+                    "requester_role": widget.adminData['role'],
+                    "admin_id": admin['id'],
+                    "admin_name": admin['full_name'],
+                    "permissions": perms.join(','),
+                  }),
                 );
                 if (ctx.mounted) Navigator.pop(ctx);
                 onUpdated();
@@ -1129,49 +1239,19 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
     final List<Widget> accessiblePages = [
       hasAccess('analytics')
-          ? AnalyticsDashboardScreen(
-              adminData: widget.adminData,
-              openDrawer: () => _scaffoldKey.currentState?.openDrawer(),
-              onNotificationTap: _showNotificationsSheet,
-              onSecurityTap: _showAdminManagementPanel,
-              notificationCount: notifications.length,
-            )
+          ? AnalyticsDashboardScreen(adminData: widget.adminData, openDrawer: () => _scaffoldKey.currentState?.openDrawer(), onNotificationTap: _showNotificationsSheet, onSecurityTap: isSuperAdmin ? _showAdminManagementPanel : null, notificationCount: notifications.length)
           : const Scaffold(body: Center(child: Text("شما به بخش آمار دسترسی ندارید"))),
       hasAccess('buy')
-          ? BuyPhoneScreen(
-              adminData: widget.adminData,
-              openDrawer: () => _scaffoldKey.currentState?.openDrawer(),
-              onNotificationTap: _showNotificationsSheet,
-              onSecurityTap: _showAdminManagementPanel,
-              notificationCount: notifications.length,
-            )
+          ? BuyPhoneScreen(adminData: widget.adminData, openDrawer: () => _scaffoldKey.currentState?.openDrawer(), onNotificationTap: _showNotificationsSheet, onSecurityTap: isSuperAdmin ? _showAdminManagementPanel : null, notificationCount: notifications.length)
           : const Scaffold(body: Center(child: Text("شما به بخش خرید دسترسی ندارید"))),
       hasAccess('sell')
-          ? SellPhoneScreen(
-              adminData: widget.adminData,
-              openDrawer: () => _scaffoldKey.currentState?.openDrawer(),
-              onNotificationTap: _showNotificationsSheet,
-              onSecurityTap: _showAdminManagementPanel,
-              notificationCount: notifications.length,
-            )
+          ? SellPhoneScreen(adminData: widget.adminData, openDrawer: () => _scaffoldKey.currentState?.openDrawer(), onNotificationTap: _showNotificationsSheet, onSecurityTap: isSuperAdmin ? _showAdminManagementPanel : null, notificationCount: notifications.length)
           : const Scaffold(body: Center(child: Text("شما به بخش فروش دسترسی ندارید"))),
       hasAccess('inventory')
-          ? InventoryAndReportsScreen(
-              adminData: widget.adminData,
-              openDrawer: () => _scaffoldKey.currentState?.openDrawer(),
-              onNotificationTap: _showNotificationsSheet,
-              onSecurityTap: _showAdminManagementPanel,
-              notificationCount: notifications.length,
-            )
+          ? InventoryAndReportsScreen(adminData: widget.adminData, openDrawer: () => _scaffoldKey.currentState?.openDrawer(), onNotificationTap: _showNotificationsSheet, onSecurityTap: isSuperAdmin ? _showAdminManagementPanel : null, notificationCount: notifications.length)
           : const Scaffold(body: Center(child: Text("شما به بخش انبار دسترسی ندارید"))),
       hasAccess('accessories')
-          ? AccessoriesScreen(
-              adminData: widget.adminData,
-              openDrawer: () => _scaffoldKey.currentState?.openDrawer(),
-              onNotificationTap: _showNotificationsSheet,
-              onSecurityTap: _showAdminManagementPanel,
-              notificationCount: notifications.length,
-            )
+          ? AccessoriesScreen(adminData: widget.adminData, openDrawer: () => _scaffoldKey.currentState?.openDrawer(), onNotificationTap: _showNotificationsSheet, onSecurityTap: isSuperAdmin ? _showAdminManagementPanel : null, notificationCount: notifications.length)
           : const Scaffold(body: Center(child: Text("شما به بخش اکسسوری دسترسی ندارید"))),
     ];
 
@@ -1184,20 +1264,12 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             Container(
               padding: const EdgeInsets.fromLTRB(20, 50, 20, 24),
               decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [PromaxColors.headerGradientStart, PromaxColors.headerGradientEnd],
-                  begin: Alignment.topRight,
-                  end: Alignment.bottomLeft,
-                ),
+                gradient: LinearGradient(colors: [PromaxColors.headerGradientStart, PromaxColors.headerGradientEnd], begin: Alignment.topRight, end: Alignment.bottomLeft),
                 borderRadius: BorderRadius.only(bottomLeft: Radius.circular(24), bottomRight: Radius.circular(24)),
               ),
               child: Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), shape: BoxShape.circle),
-                    child: const Icon(Icons.person, color: Colors.white, size: 30),
-                  ),
+                  Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), shape: BoxShape.circle), child: const Icon(Icons.person, color: Colors.white, size: 30)),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(
@@ -1280,10 +1352,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       body: accessiblePages[_currentIndex],
       bottomNavigationBar: Container(
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -4))],
-        ),
+        decoration: BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -4))]),
         child: SafeArea(
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -1326,12 +1395,12 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   }
 }
 
-// ==================== داشبورد آمار و تحلیل بدون سرریز متن ====================
+// ==================== داشبورد آمار مالی با کارت بدهکاران و تماس سریع ====================
 class AnalyticsDashboardScreen extends StatefulWidget {
   final Map<String, dynamic> adminData;
   final VoidCallback openDrawer;
   final VoidCallback onNotificationTap;
-  final VoidCallback onSecurityTap;
+  final VoidCallback? onSecurityTap;
   final int notificationCount;
 
   const AnalyticsDashboardScreen({
@@ -1339,7 +1408,7 @@ class AnalyticsDashboardScreen extends StatefulWidget {
     required this.adminData,
     required this.openDrawer,
     required this.onNotificationTap,
-    required this.onSecurityTap,
+    this.onSecurityTap,
     required this.notificationCount,
   });
 
@@ -1504,11 +1573,26 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
     );
   }
 
+  // برقراری تماس مستقیم با بدهکار
+  void _makePhoneCall(String phoneNumber) async {
+    final cleanPhone = phoneNumber.replaceAll(RegExp(r'[^0-9+]'), '');
+    if (cleanPhone.isEmpty) return;
+    final Uri launchUri = Uri(scheme: 'tel', path: cleanPhone);
+    try {
+      await launchUrl(launchUri);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("امکان برقراری تماس وجود ندارد: $phoneNumber")));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final int bankBalance = data?['bank_balance'] ?? 0;
     final int totalLiquidity = data?['total_liquidity'] ?? 0;
     final List<dynamic> salesOrders = data?['sales_orders'] ?? [];
+    final List<dynamic> debtors = data?['debtors'] ?? [];
 
     return PromaxPageLayout(
       title: "گزارش‌ها و آمارها",
@@ -1562,12 +1646,13 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
                       ),
                       const SizedBox(height: 14),
 
-                      // کارت نقدینگی
+                      // کارت نقدینگی کل
                       Container(
                         padding: const EdgeInsets.all(18),
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(colors: [Color(0xFF0F2B48), Color(0xFF1E3A8A)], begin: Alignment.topRight, end: Alignment.bottomLeft),
                           borderRadius: BorderRadius.circular(22),
+                          boxShadow: [BoxShadow(color: Colors.blue.withOpacity(0.2), blurRadius: 10, offset: const Offset(0, 4))],
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1579,11 +1664,87 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Flexible(child: Text("موجودی کارت‌ها: ${formatToman(bankBalance)} ت", overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFFFDE047), fontWeight: FontWeight.bold, fontSize: 12.5))),
-                                const SizedBox(width: 8),
-                                Flexible(child: Text("سود: ${formatToman(data?['selected_profit'])} ت", overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 12))),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text("موجودی نقدی کارت‌ها:", style: TextStyle(color: Colors.white70, fontSize: 11)),
+                                    const SizedBox(height: 2),
+                                    Text("${formatToman(bankBalance)} تومان", style: const TextStyle(color: Color(0xFFFDE047), fontWeight: FontWeight.bold, fontSize: 14)),
+                                  ],
+                                ),
+                                Row(
+                                  children: [
+                                    IconButton(
+                                      tooltip: "ویرایش موجودی کارت",
+                                      icon: const Icon(Icons.edit_note, color: Colors.white),
+                                      onPressed: _showEditBankBalanceDialog,
+                                    ),
+                                    FilledButton.icon(
+                                      onPressed: _showAddExpenseDialog,
+                                      style: FilledButton.styleFrom(backgroundColor: Colors.red.shade600, padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6)),
+                                      icon: const Icon(Icons.remove_circle_outline, size: 16),
+                                      label: const Text("برداشت / هزینه", style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold)),
+                                    ),
+                                  ],
+                                )
                               ],
                             ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // کارت اختصاصی بدهکاران با دکمه تماس سریع
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: PromaxColors.fieldBorder)),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Row(
+                                  children: [
+                                    Icon(Icons.warning_amber_rounded, color: Colors.red, size: 20),
+                                    SizedBox(width: 8),
+                                    Text("لیست بدهکاران فروشگاه", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.red)),
+                                  ],
+                                ),
+                                Text("${debtors.length} نفر", style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: PromaxColors.textMuted)),
+                              ],
+                            ),
+                            const Divider(height: 16),
+                            if (debtors.isEmpty)
+                              const Padding(padding: EdgeInsets.all(10), child: Center(child: Text("تمامی حساب‌ها تسویه کامل هستند", style: TextStyle(color: Colors.green, fontSize: 11))))
+                            else
+                              ...debtors.map((d) => Container(
+                                    margin: const EdgeInsets.only(bottom: 8),
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(color: Colors.red.shade50, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.red.shade100)),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text("${d['buyer_name']} (${d['brand']} ${d['model']})", overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                                              const SizedBox(height: 3),
+                                              Text("مانده: ${formatToman(d['remaining_amount'])} ت | موعد: ${d['credit_due_shamsi'] ?? '-'}", style: const TextStyle(fontSize: 10, color: Colors.brown)),
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        FilledButton.icon(
+                                          onPressed: () => _makePhoneCall(d['buyer_phone']),
+                                          icon: const Icon(Icons.phone_in_talk, size: 16),
+                                          label: const Text("تماس سریع", style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold)),
+                                          style: FilledButton.styleFrom(backgroundColor: PromaxColors.greenAction, padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6)),
+                                        ),
+                                      ],
+                                    ),
+                                  )),
                           ],
                         ),
                       ),
@@ -1617,7 +1778,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
                       ),
                       const SizedBox(height: 16),
 
-                      // لیست خریداران با تاریخ و ساعت دقیق ثبت بدون سرریز شدن متن
+                      // لیست سفارش‌ها و خریداران
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: PromaxColors.fieldBorder)),
@@ -2064,14 +2225,14 @@ class DonutChartPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-// ==================== انبار دو تبه با مشخصات کامل ====================
+// ==================== انبار با تفکیک موجودی، مدیریت رجیستری و حذف ====================
 class InventoryAndReportsScreen extends StatefulWidget {
   final Map<String, dynamic> adminData;
   final VoidCallback openDrawer;
   final VoidCallback onNotificationTap;
-  final VoidCallback onSecurityTap;
+  final VoidCallback? onSecurityTap;
   final int notificationCount;
-  const InventoryAndReportsScreen({super.key, required this.adminData, required this.openDrawer, required this.onNotificationTap, required this.onSecurityTap, required this.notificationCount});
+  const InventoryAndReportsScreen({super.key, required this.adminData, required this.openDrawer, required this.onNotificationTap, this.onSecurityTap, required this.notificationCount});
 
   @override
   State<InventoryAndReportsScreen> createState() => _InventoryAndReportsScreenState();
@@ -2449,9 +2610,9 @@ class BuyPhoneScreen extends StatefulWidget {
   final Map<String, dynamic> adminData;
   final VoidCallback openDrawer;
   final VoidCallback onNotificationTap;
-  final VoidCallback onSecurityTap;
+  final VoidCallback? onSecurityTap;
   final int notificationCount;
-  const BuyPhoneScreen({super.key, required this.adminData, required this.openDrawer, required this.onNotificationTap, required this.onSecurityTap, required this.notificationCount});
+  const BuyPhoneScreen({super.key, required this.adminData, required this.openDrawer, required this.onNotificationTap, this.onSecurityTap, required this.notificationCount});
 
   @override
   State<BuyPhoneScreen> createState() => _BuyPhoneScreenState();
@@ -2639,14 +2800,14 @@ class _BuyPhoneScreenState extends State<BuyPhoneScreen> {
   }
 }
 
-// ==================== فروش گوشی با قرض شمسی ====================
+// ==================== فروش گوشی با موعد شمسی قرض ====================
 class SellPhoneScreen extends StatefulWidget {
   final Map<String, dynamic> adminData;
   final VoidCallback openDrawer;
   final VoidCallback onNotificationTap;
-  final VoidCallback onSecurityTap;
+  final VoidCallback? onSecurityTap;
   final int notificationCount;
-  const SellPhoneScreen({super.key, required this.adminData, required this.openDrawer, required this.onNotificationTap, required this.onSecurityTap, required this.notificationCount});
+  const SellPhoneScreen({super.key, required this.adminData, required this.openDrawer, required this.onNotificationTap, this.onSecurityTap, required this.notificationCount});
 
   @override
   State<SellPhoneScreen> createState() => _SellPhoneScreenState();
@@ -2880,14 +3041,14 @@ class _SellPhoneScreenState extends State<SellPhoneScreen> {
   }
 }
 
-// ==================== لوازم جانبی ====================
+// ==================== لوازم جانبی با فروش توافقی و تخفیف‌دار ====================
 class AccessoriesScreen extends StatefulWidget {
   final Map<String, dynamic> adminData;
   final VoidCallback openDrawer;
   final VoidCallback onNotificationTap;
-  final VoidCallback onSecurityTap;
+  final VoidCallback? onSecurityTap;
   final int notificationCount;
-  const AccessoriesScreen({super.key, required this.adminData, required this.openDrawer, required this.onNotificationTap, required this.onSecurityTap, required this.notificationCount});
+  const AccessoriesScreen({super.key, required this.adminData, required this.openDrawer, required this.onNotificationTap, this.onSecurityTap, required this.notificationCount});
 
   @override
   State<AccessoriesScreen> createState() => _AccessoriesScreenState();
