@@ -14,7 +14,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'invoice.dart';
 
 const String serverUrl = "https://promaxmobile.ir/api.php";
-const String appVersion = "2.5.0";
+const String appVersion = "2.6.0";
 const String developerName = "ezizfd";
 
 const List<String> popularBrands = [
@@ -273,7 +273,7 @@ class _PromaxProgressLoadingState extends State<PromaxProgressLoading>
   }
 }
 
-// ساختار هدر یکپارچه با محدودسازی دکمه امنیت تنها برای سوپرادمین
+// ساختار هدر یکپارچه برای تمام صفحات
 class PromaxPageLayout extends StatelessWidget {
   final String title;
   final String adminName;
@@ -954,7 +954,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     );
   }
 
-  // پنل مدیریت دسترسی‌ها، افزودن و حذف ادمین (مخصوص سوپرادمین)
+  // پنل مدیریت ادمین‌ها فقط مخصوص super_admin
   void _showAdminManagementPanel() async {
     final res = await http.get(Uri.parse("$serverUrl?action=get_admins"));
     final logRes = await http.get(Uri.parse("$serverUrl?action=get_logs"));
@@ -972,7 +972,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         builder: (context, setPanelState) => Container(
           height: MediaQuery.of(context).size.height * 0.85,
           padding: const EdgeInsets.all(20),
-          decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
           child: DefaultTabController(
             length: 2,
             child: Column(
@@ -981,7 +984,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                 const SizedBox(height: 12),
                 const TabBar(
                   tabs: [
-                    Tab(icon: Icon(Icons.manage_accounts), text: "مدیریت و دسترسی همکاران"),
+                    Tab(icon: Icon(Icons.manage_accounts), text: "مدیریت دسترسی همکاران"),
                     Tab(icon: Icon(Icons.history), text: "تاریخچه فعالیت‌ها"),
                   ],
                 ),
@@ -1239,19 +1242,49 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
     final List<Widget> accessiblePages = [
       hasAccess('analytics')
-          ? AnalyticsDashboardScreen(adminData: widget.adminData, openDrawer: () => _scaffoldKey.currentState?.openDrawer(), onNotificationTap: _showNotificationsSheet, onSecurityTap: isSuperAdmin ? _showAdminManagementPanel : null, notificationCount: notifications.length)
+          ? AnalyticsDashboardScreen(
+              adminData: widget.adminData,
+              openDrawer: () => _scaffoldKey.currentState?.openDrawer(),
+              onNotificationTap: _showNotificationsSheet,
+              onSecurityTap: isSuperAdmin ? _showAdminManagementPanel : null,
+              notificationCount: notifications.length,
+            )
           : const Scaffold(body: Center(child: Text("شما به بخش آمار دسترسی ندارید"))),
       hasAccess('buy')
-          ? BuyPhoneScreen(adminData: widget.adminData, openDrawer: () => _scaffoldKey.currentState?.openDrawer(), onNotificationTap: _showNotificationsSheet, onSecurityTap: isSuperAdmin ? _showAdminManagementPanel : null, notificationCount: notifications.length)
+          ? BuyPhoneScreen(
+              adminData: widget.adminData,
+              openDrawer: () => _scaffoldKey.currentState?.openDrawer(),
+              onNotificationTap: _showNotificationsSheet,
+              onSecurityTap: isSuperAdmin ? _showAdminManagementPanel : null,
+              notificationCount: notifications.length,
+            )
           : const Scaffold(body: Center(child: Text("شما به بخش خرید دسترسی ندارید"))),
       hasAccess('sell')
-          ? SellPhoneScreen(adminData: widget.adminData, openDrawer: () => _scaffoldKey.currentState?.openDrawer(), onNotificationTap: _showNotificationsSheet, onSecurityTap: isSuperAdmin ? _showAdminManagementPanel : null, notificationCount: notifications.length)
+          ? SellPhoneScreen(
+              adminData: widget.adminData,
+              openDrawer: () => _scaffoldKey.currentState?.openDrawer(),
+              onNotificationTap: _showNotificationsSheet,
+              onSecurityTap: isSuperAdmin ? _showAdminManagementPanel : null,
+              notificationCount: notifications.length,
+            )
           : const Scaffold(body: Center(child: Text("شما به بخش فروش دسترسی ندارید"))),
       hasAccess('inventory')
-          ? InventoryAndReportsScreen(adminData: widget.adminData, openDrawer: () => _scaffoldKey.currentState?.openDrawer(), onNotificationTap: _showNotificationsSheet, onSecurityTap: isSuperAdmin ? _showAdminManagementPanel : null, notificationCount: notifications.length)
+          ? InventoryAndReportsScreen(
+              adminData: widget.adminData,
+              openDrawer: () => _scaffoldKey.currentState?.openDrawer(),
+              onNotificationTap: _showNotificationsSheet,
+              onSecurityTap: isSuperAdmin ? _showAdminManagementPanel : null,
+              notificationCount: notifications.length,
+            )
           : const Scaffold(body: Center(child: Text("شما به بخش انبار دسترسی ندارید"))),
       hasAccess('accessories')
-          ? AccessoriesScreen(adminData: widget.adminData, openDrawer: () => _scaffoldKey.currentState?.openDrawer(), onNotificationTap: _showNotificationsSheet, onSecurityTap: isSuperAdmin ? _showAdminManagementPanel : null, notificationCount: notifications.length)
+          ? AccessoriesScreen(
+              adminData: widget.adminData,
+              openDrawer: () => _scaffoldKey.currentState?.openDrawer(),
+              onNotificationTap: _showNotificationsSheet,
+              onSecurityTap: isSuperAdmin ? _showAdminManagementPanel : null,
+              notificationCount: notifications.length,
+            )
           : const Scaffold(body: Center(child: Text("شما به بخش اکسسوری دسترسی ندارید"))),
     ];
 
@@ -1264,12 +1297,20 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             Container(
               padding: const EdgeInsets.fromLTRB(20, 50, 20, 24),
               decoration: const BoxDecoration(
-                gradient: LinearGradient(colors: [PromaxColors.headerGradientStart, PromaxColors.headerGradientEnd], begin: Alignment.topRight, end: Alignment.bottomLeft),
+                gradient: LinearGradient(
+                  colors: [PromaxColors.headerGradientStart, PromaxColors.headerGradientEnd],
+                  begin: Alignment.topRight,
+                  end: Alignment.bottomLeft,
+                ),
                 borderRadius: BorderRadius.only(bottomLeft: Radius.circular(24), bottomRight: Radius.circular(24)),
               ),
               child: Row(
                 children: [
-                  Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), shape: BoxShape.circle), child: const Icon(Icons.person, color: Colors.white, size: 30)),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), shape: BoxShape.circle),
+                    child: const Icon(Icons.person, color: Colors.white, size: 30),
+                  ),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(
@@ -1352,7 +1393,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       body: accessiblePages[_currentIndex],
       bottomNavigationBar: Container(
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-        decoration: BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -4))]),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -4))],
+        ),
         child: SafeArea(
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -1395,7 +1439,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   }
 }
 
-// ==================== داشبورد آمار مالی با کارت بدهکاران و تماس سریع ====================
+// ==================== داشبورد آمار مالی کامل ====================
 class AnalyticsDashboardScreen extends StatefulWidget {
   final Map<String, dynamic> adminData;
   final VoidCallback openDrawer;
@@ -1573,7 +1617,6 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
     );
   }
 
-  // برقراری تماس مستقیم با بدهکار
   void _makePhoneCall(String phoneNumber) async {
     final cleanPhone = phoneNumber.replaceAll(RegExp(r'[^0-9+]'), '');
     if (cleanPhone.isEmpty) return;
@@ -1587,12 +1630,65 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
     }
   }
 
+  void _showExpenseDetailDialog(Map<String, dynamic> item) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            const Icon(Icons.receipt_long_rounded, color: Colors.red),
+            const SizedBox(width: 8),
+            Text(item['title'] ?? 'جزئیات هزینه', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _detailText("دسته‌بندی:", "${item['category'] ?? 'هزینه جاری'}"),
+            _detailText("مبلغ برداشت شده:", "${formatToman(item['amount'])} تومان", isBold: true, color: Colors.red),
+            _detailText("ادمین ثبت‌کننده:", "${item['recorded_by'] ?? 'مدیر'}"),
+            _detailText("تاریخ و ساعت ثبت:", "${item['expense_date'] ?? '-'}"),
+            const Divider(height: 18),
+            const Text("توضیحات و یادداشت:", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: PromaxColors.textMuted)),
+            const SizedBox(height: 4),
+            Text(
+              (item['description'] != null && item['description'].toString().trim().isNotEmpty)
+                  ? item['description']
+                  : "توضیحاتی برای این هزینه ثبت نشده است.",
+              style: const TextStyle(fontSize: 12, height: 1.5),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("بستن")),
+        ],
+      ),
+    );
+  }
+
+  Widget _detailText(String title, String value, {bool isBold = false, Color? color}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(title, style: const TextStyle(fontSize: 11.5, color: PromaxColors.textMuted)),
+          Text(value, style: TextStyle(fontSize: 12, fontWeight: isBold ? FontWeight.bold : FontWeight.normal, color: color ?? Colors.black87)),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final int bankBalance = data?['bank_balance'] ?? 0;
     final int totalLiquidity = data?['total_liquidity'] ?? 0;
     final List<dynamic> salesOrders = data?['sales_orders'] ?? [];
     final List<dynamic> debtors = data?['debtors'] ?? [];
+    final List<dynamic> expenses = data?['expenses'] ?? [];
+    final int totalExpenses = data?['total_expenses'] ?? 0;
 
     return PromaxPageLayout(
       title: "گزارش‌ها و آمارها",
@@ -1694,6 +1790,75 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
                       ),
                       const SizedBox(height: 14),
 
+                      // بخش اختصاصی برداشت سود و هزینه‌ها
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: PromaxColors.fieldBorder),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Row(
+                                  children: [
+                                    Icon(Icons.account_balance_wallet_outlined, color: Colors.red, size: 20),
+                                    SizedBox(width: 8),
+                                    Text("برداشت سود و هزینه‌های مغازه", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.red)),
+                                  ],
+                                ),
+                                Text("جمع: ${formatToman(totalExpenses)} ت", style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.red)),
+                              ],
+                            ),
+                            const Divider(height: 16),
+                            if (expenses.isEmpty)
+                              const Padding(padding: EdgeInsets.all(10), child: Center(child: Text("هزینه‌ای در این بازه ثبت نشده است", style: TextStyle(color: Colors.grey, fontSize: 11))))
+                            else
+                              ...expenses.map((ex) => InkWell(
+                                    onTap: () => _showExpenseDetailDialog(ex),
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: Container(
+                                      margin: const EdgeInsets.only(bottom: 8),
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: Colors.red.shade50.withOpacity(0.5),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(color: Colors.red.shade100),
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(ex['title'] ?? 'هزینه', overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                                                const SizedBox(height: 3),
+                                                Text("ثبت: ${ex['recorded_by']} | ${ex['expense_date']}", style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                                              ],
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Row(
+                                            children: [
+                                              Text("${formatToman(ex['amount'])} تومان", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.red)),
+                                              const SizedBox(width: 4),
+                                              const Icon(Icons.arrow_forward_ios, size: 12, color: Colors.grey),
+                                            ],
+                                          )
+                                        ],
+                                      ),
+                                    ),
+                                  )),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+
                       // کارت اختصاصی بدهکاران با دکمه تماس سریع
                       Container(
                         padding: const EdgeInsets.all(16),
@@ -1778,7 +1943,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
                       ),
                       const SizedBox(height: 16),
 
-                      // لیست سفارش‌ها و خریداران
+                      // لیست سفارش‌ها و خریداران بدون سرریز شدن
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: PromaxColors.fieldBorder)),
@@ -1827,14 +1992,24 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
                         ),
                       ),
                       const SizedBox(height: 16),
+
+                      // نمودار خطی مقایسه فروش و سود
                       _buildSalesAndProfitLineChart(),
                       const SizedBox(height: 16),
+
+                      // نمودار دونات سهم برندها
                       _buildBrandDonutChart(),
                       const SizedBox(height: 16),
+
+                      // نمودار میله‌ای مقایسه هفتگی
                       _buildWeeklyBarChart(),
                       const SizedBox(height: 16),
+
+                      // جدول کالاهای کم‌موجودی
                       _buildLowStockTable(),
                       const SizedBox(height: 16),
+
+                      // باکس هوشمند
                       _buildRecentActivitiesAndAiSummary(),
                       const SizedBox(height: 20),
                     ],
@@ -2225,7 +2400,7 @@ class DonutChartPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-// ==================== انبار با تفکیک موجودی، مدیریت رجیستری و حذف ====================
+// ==================== انبار دو تبه با مشخصات کامل ====================
 class InventoryAndReportsScreen extends StatefulWidget {
   final Map<String, dynamic> adminData;
   final VoidCallback openDrawer;
@@ -2514,7 +2689,7 @@ class _InventoryAndReportsScreenState extends State<InventoryAndReportsScreen> {
                   child: TextField(
                     onChanged: (v) => setState(() => searchQuery = v),
                     decoration: InputDecoration(
-                      hintText: "جستجو با مدل، سریال، نام فروشنده یا خریدار...",
+                      hintText: "جستجو در انبار (مدل، سریال، فروشنده...)",
                       prefixIcon: const Icon(Icons.search),
                       filled: true, fillColor: Colors.white,
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -2605,7 +2780,7 @@ class _InventoryAndReportsScreenState extends State<InventoryAndReportsScreen> {
   }
 }
 
-// ==================== خرید گوشی ====================
+// ==================== صفحه خرید گوشی ====================
 class BuyPhoneScreen extends StatefulWidget {
   final Map<String, dynamic> adminData;
   final VoidCallback openDrawer;
@@ -2800,7 +2975,7 @@ class _BuyPhoneScreenState extends State<BuyPhoneScreen> {
   }
 }
 
-// ==================== فروش گوشی با موعد شمسی قرض ====================
+// ==================== فروش گوشی با اعتبارسنجی کامل ====================
 class SellPhoneScreen extends StatefulWidget {
   final Map<String, dynamic> adminData;
   final VoidCallback openDrawer;
@@ -2825,75 +3000,120 @@ class _SellPhoneScreenState extends State<SellPhoneScreen> {
   String selectedRegistry = registryOptions[0];
   bool hamtaVerified = true;
   String? creditDueShamsi;
+  bool isSubmitting = false;
 
   int get remaining {
-    int total = int.tryParse(priceCtl.text.replaceAll(',', '')) ?? 0;
-    int paid = int.tryParse(paidCtl.text.replaceAll(',', '')) ?? total;
+    int total = int.tryParse(priceCtl.text.replaceAll(',', '').trim()) ?? 0;
+    int paid = int.tryParse(paidCtl.text.replaceAll(',', '').trim()) ?? total;
     return total - paid;
   }
 
   Future<void> submit() async {
-    if (imeiCtl.text.isEmpty || priceCtl.text.isEmpty) return;
-    int total = int.parse(priceCtl.text.replaceAll(',', ''));
-    int paid = int.tryParse(paidCtl.text.replaceAll(',', '')) ?? total;
+    final String cleanImei = imeiCtl.text.trim();
+    final String cleanPriceStr = priceCtl.text.replaceAll(',', '').trim();
+
+    if (cleanImei.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("شناسه IMEI دستگاه الزامی است")),
+      );
+      return;
+    }
+
+    if (cleanPriceStr.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("مبلغ نهایی فروش را وارد کنید")),
+      );
+      return;
+    }
+
+    final int total = int.tryParse(cleanPriceStr) ?? 0;
+    if (total <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("مبلغ فروش نامعتبر است")),
+      );
+      return;
+    }
+
+    final String cleanPaidStr = paidCtl.text.replaceAll(',', '').trim();
+    final int paid = cleanPaidStr.isNotEmpty ? (int.tryParse(cleanPaidStr) ?? total) : total;
+
+    setState(() => isSubmitting = true);
 
     final now = Jalali.now();
     final timeNow = "${DateTime.now().hour}:${DateTime.now().minute.toString().padLeft(2, '0')}";
 
-    final res = await http.post(
-      Uri.parse("$serverUrl?action=sell_phone"),
-      headers: {"Content-Type": "application/json"},
-      body: jsonEncode({
-        "imei": imeiCtl.text,
-        "sale_price": total,
-        "paid_amount": paid,
-        "payment_method": selectedMethod,
-        "payment_details": payDetailsCtl.text,
-        "buyer_name": buyerNameCtl.text.isEmpty ? "مشتری متفرقه" : buyerNameCtl.text,
-        "buyer_phone": buyerPhoneCtl.text,
-        "description": descCtl.text,
-        "registry_status": selectedRegistry,
-        "hamta_verified": hamtaVerified ? 1 : 0,
-        "credit_due_shamsi": creditDueShamsi,
-        "sale_time": "$timeNow - ${now.year}/${now.month}/${now.day}",
-        "admin_name": widget.adminData['full_name'],
-      }),
-    );
+    try {
+      final res = await http.post(
+        Uri.parse("$serverUrl?action=sell_phone"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "imei": cleanImei,
+          "sale_price": total,
+          "paid_amount": paid,
+          "payment_method": selectedMethod,
+          "payment_details": payDetailsCtl.text.trim(),
+          "buyer_name": buyerNameCtl.text.trim().isEmpty ? "مشتری متفرقه" : buyerNameCtl.text.trim(),
+          "buyer_phone": buyerPhoneCtl.text.trim(),
+          "description": descCtl.text.trim(),
+          "registry_status": selectedRegistry,
+          "hamta_verified": hamtaVerified ? 1 : 0,
+          "credit_due_shamsi": creditDueShamsi,
+          "sale_time": "$timeNow - ${now.year}/${now.month}/${now.day}",
+          "admin_name": widget.adminData['full_name'],
+        }),
+      );
 
-    final data = jsonDecode(res.body);
-    if (!mounted) return;
-    if (data['status'] == 'success') {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => Scaffold(
-            appBar: AppBar(title: const Text("پیش‌نمایش فاکتور رسمی")),
-            body: PdfPreview(
-              build: (format) => InvoiceHelper.createInvoice(
-                title: "فاکتور رسمی فروش کالا",
-                personName: buyerNameCtl.text.isEmpty ? "مشتری فروشگاه" : buyerNameCtl.text,
-                phone: buyerPhoneCtl.text,
-                nationalId: "-",
-                brand: "تلفن همراه",
-                model: "فروخته‌شده",
-                imei: imeiCtl.text,
-                totalPrice: total,
-                paidPrice: paid,
-                remainingPrice: total - paid,
-                paymentMethod: selectedMethod,
-                paymentDetails: payDetailsCtl.text,
-                adminName: widget.adminData['full_name'],
-                description: descCtl.text,
-                registryStatus: selectedRegistry,
-                hamtaVerified: hamtaVerified,
-                isSale: true,
+      final data = jsonDecode(res.body);
+      setState(() => isSubmitting = false);
+
+      if (!mounted) return;
+
+      if (data['status'] == 'success') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("فروش دستگاه با موفقیت ثبت شد")),
+        );
+
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => Scaffold(
+              appBar: AppBar(title: const Text("پیش‌نمایش فاکتور رسمی")),
+              body: PdfPreview(
+                build: (format) => InvoiceHelper.createInvoice(
+                  title: "فاکتور رسمی فروش کالا",
+                  personName: buyerNameCtl.text.isEmpty ? "مشتری فروشگاه" : buyerNameCtl.text,
+                  phone: buyerPhoneCtl.text,
+                  nationalId: "-",
+                  brand: "تلفن همراه",
+                  model: "فروخته‌شده",
+                  imei: cleanImei,
+                  totalPrice: total,
+                  paidPrice: paid,
+                  remainingPrice: total - paid,
+                  paymentMethod: selectedMethod,
+                  paymentDetails: payDetailsCtl.text,
+                  adminName: widget.adminData['full_name'],
+                  description: descCtl.text,
+                  registryStatus: selectedRegistry,
+                  hamtaVerified: hamtaVerified,
+                  isSale: true,
+                ),
               ),
             ),
           ),
-        ),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(data['message'])));
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(data['message'] ?? "خطا در ثبت فروش کالا")),
+        );
+      }
+    } catch (e) {
+      setState(() => isSubmitting = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("خطای ارتباط با سرور: $e")),
+        );
+      }
     }
   }
 
@@ -3030,9 +3250,11 @@ class _SellPhoneScreenState extends State<SellPhoneScreen> {
           _buildInput(controller: buyerPhoneCtl, hint: "شماره تماس خریدار", prefixIcon: Icons.phone_outlined, isPhone: true),
           const SizedBox(height: 24),
           ElevatedButton(
-            onPressed: submit,
+            onPressed: isSubmitting ? null : submit,
             style: ElevatedButton.styleFrom(backgroundColor: PromaxColors.greenAction, foregroundColor: Colors.white, minimumSize: const Size.fromHeight(54), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24))),
-            child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.check_circle_outline), SizedBox(width: 8), Text("ثبت خروج از انبار و صدور فاکتور", style: TextStyle(fontWeight: FontWeight.bold))]),
+            child: isSubmitting
+                ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
+                : const Row(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.check_circle_outline), SizedBox(width: 8), Text("ثبت خروج از انبار و صدور فاکتور", style: TextStyle(fontWeight: FontWeight.bold))]),
           ),
           const SizedBox(height: 20),
         ],
@@ -3041,7 +3263,7 @@ class _SellPhoneScreenState extends State<SellPhoneScreen> {
   }
 }
 
-// ==================== لوازم جانبی با فروش توافقی و تخفیف‌دار ====================
+// ==================== صفحه لوازم جانبی ====================
 class AccessoriesScreen extends StatefulWidget {
   final Map<String, dynamic> adminData;
   final VoidCallback openDrawer;
