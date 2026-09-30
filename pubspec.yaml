@@ -1,7 +1,7 @@
 name: hesabdar_promax
-description: نرم افزار جامع و هوشمند حسابداری و مدیریت فروشگاه موبایل پرومکس
+description: نرم افزار حسابدار پرومکس
 publish_to: 'none'
-version: 1.6.0+1
+version: 2.5.0+1
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -20,6 +20,7 @@ dependencies:
   local_auth: ^2.3.0
   flutter_secure_storage: ^9.0.0
   shimmer: ^3.0.0
+  url_launcher: ^6.3.0
 
 flutter:
   uses-material-design: true
