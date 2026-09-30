@@ -3008,7 +3008,7 @@ class _SellPhoneScreenState extends State<SellPhoneScreen> {
     return total - paid;
   }
 
-  Future<void> submit() async {
+ Future<void> submit() async {
     final String cleanImei = imeiCtl.text.trim();
     final String cleanPriceStr = priceCtl.text.replaceAll(',', '').trim();
 
@@ -3057,16 +3057,24 @@ class _SellPhoneScreenState extends State<SellPhoneScreen> {
           "description": descCtl.text.trim(),
           "registry_status": selectedRegistry,
           "hamta_verified": hamtaVerified ? 1 : 0,
-          "credit_due_shamsi": creditDueShamsi,
+          "credit_due_shamsi": creditDueShamsi ?? '',
           "sale_time": "$timeNow - ${now.year}/${now.month}/${now.day}",
           "admin_name": widget.adminData['full_name'],
         }),
-      );
+      ).timeout(const Duration(seconds: 15));
 
-      final data = jsonDecode(res.body);
       setState(() => isSubmitting = false);
 
       if (!mounted) return;
+
+      if (res.body.trim().isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("سرور پاسخی ارسال نکرد. لطفاً اسکریپت api.php را بررسی فرمایید.")),
+        );
+        return;
+      }
+
+      final data = jsonDecode(res.body);
 
       if (data['status'] == 'success') {
         ScaffoldMessenger.of(context).showSnackBar(
