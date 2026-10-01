@@ -3272,13 +3272,22 @@ class _SellPhoneScreenState extends State<SellPhoneScreen> {
 }
 
 // ==================== صفحه لوازم جانبی ====================
+// ==================== صفحه پیشرفته لوازم جانبی با جستجو و کارت آمار مالی ====================
 class AccessoriesScreen extends StatefulWidget {
   final Map<String, dynamic> adminData;
   final VoidCallback openDrawer;
   final VoidCallback onNotificationTap;
   final VoidCallback? onSecurityTap;
   final int notificationCount;
-  const AccessoriesScreen({super.key, required this.adminData, required this.openDrawer, required this.onNotificationTap, this.onSecurityTap, required this.notificationCount});
+
+  const AccessoriesScreen({
+    super.key,
+    required this.adminData,
+    required this.openDrawer,
+    required this.onNotificationTap,
+    this.onSecurityTap,
+    required this.notificationCount,
+  });
 
   @override
   State<AccessoriesScreen> createState() => _AccessoriesScreenState();
@@ -3286,7 +3295,9 @@ class AccessoriesScreen extends StatefulWidget {
 
 class _AccessoriesScreenState extends State<AccessoriesScreen> {
   List<dynamic> accessories = [];
+  String searchQuery = "";
   bool loading = true;
+  int totalProfitAcc = 0;
 
   @override
   void initState() {
@@ -3298,11 +3309,25 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
     setState(() => loading = true);
     try {
       final res = await http.get(Uri.parse("$serverUrl?action=get_accessories"));
+      final summaryRes = await http.get(Uri.parse("$serverUrl?action=get_summary&period=all"));
+
       if (res.statusCode == 200) {
+        final d = jsonDecode(res.body);
+        int profit = 0;
+        if (summaryRes.statusCode == 200) {
+          final s = jsonDecode(summaryRes.body);
+          if (s['status'] == 'success') {
+            profit = s['data']['acc_profit'] ?? 0;
+          }
+        }
+
         setState(() {
-          accessories = jsonDecode(res.body)['data'];
+          accessories = d['data'] ?? [];
+          totalProfitAcc = profit;
           loading = false;
         });
+      } else {
+        setState(() => loading = false);
       }
     } catch (_) {
       setState(() => loading = false);
@@ -3331,7 +3356,10 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
               Row(
                 children: [
                   Expanded(child: TextField(controller: barcodeCtl, decoration: const InputDecoration(labelText: "بارکد (اختیاری)"))),
-                  IconButton(icon: const Icon(Icons.qr_code_scanner, color: PromaxColors.blueAction), onPressed: () => openSafeScanner(context, (c) => barcodeCtl.text = c)),
+                  IconButton(
+                    icon: const Icon(Icons.qr_code_scanner, color: PromaxColors.blueAction),
+                    onPressed: () => openSafeScanner(context, (c) => barcodeCtl.text = c),
+                  ),
                 ],
               ),
               const SizedBox(height: 8),
@@ -3425,6 +3453,207 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
         ],
       ),
     );
+  }
+
+  void _showSellDialog(Map<String, dynamic> item) {
+    final qtyCtl = TextEditingController(text: "1");
+    final customPriceCtl = TextEditingController(text: formatToman(item['sale_price']));
+    final buyerCtl = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text("فروش سریع: ${item['name']}"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text("موجودی: ${item['stock']} عدد | قیمت مصوب: ${formatToman(item['sale_price'])} ت"),
+            const SizedBox(height: 8),
+            TextField(controller: qtyCtl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: "تعداد فروش")),
+            const SizedBox(height: 8),
+            TextField(
+              controller: customPriceCtl,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly, CurrencyInputFormatter()],
+              decoration: const InputDecoration(labelText: "قیمت نهایی فروش هر عدد (تومان)", helperText: "در صورت تخفیف مبلغ را تغییر دهید"),
+            ),
+            const SizedBox(height: 8),
+            TextField(controller: buyerCtl, decoration: const InputDecoration(labelText: "نام خریدار (اختیاری)")),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("انصراف")),
+          FilledButton(
+            onPressed: () async {
+              final finalPrice = int.tryParse(customPriceCtl.text.replaceAll(',', '')) ?? item['sale_price'];
+              await http.post(
+                Uri.parse("$serverUrl?action=sell_accessory"),
+                headers: {"Content-Type": "application/json"},
+                body: jsonEncode({
+                  "accessory_id": item['id'],
+                  "quantity": int.parse(qtyCtl.text),
+                  "custom_sale_price": finalPrice,
+                  "buyer_name": buyerCtl.text,
+                  "admin_name": widget.adminData['full_name'],
+                }),
+              );
+              if (ctx.mounted) Navigator.pop(ctx);
+              load();
+            },
+            child: const Text("ثبت فروش"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // محاسبات زنده آمار انبار لوازم جانبی
+    int totalStockCount = 0;
+    int totalStockValue = 0;
+
+    for (var it in accessories) {
+      int s = int.tryParse(it['stock']?.toString() ?? '0') ?? 0;
+      int buy = int.tryParse(it['buy_price']?.toString() ?? '0') ?? 0;
+      totalStockCount += s;
+      totalStockValue += (s * buy);
+    }
+
+    // فیلتر بر اساس نام یا بارکد
+    final filteredAccessories = accessories.where((item) {
+      final q = searchQuery.toLowerCase().trim();
+      if (q.isEmpty) return true;
+      final name = (item['name'] ?? '').toString().toLowerCase();
+      final barcode = (item['barcode'] ?? '').toString().toLowerCase();
+      final cat = (item['category'] ?? '').toString().toLowerCase();
+      return name.contains(q) || barcode.contains(q) || cat.contains(q);
+    }).toList();
+
+    return PromaxPageLayout(
+      title: "لوازم جانبی و اکسسوری",
+      adminName: widget.adminData['full_name'],
+      subtitle: "مدیریت و آمار ارزش انبار و کالاهای بدون IMEI",
+      openDrawer: widget.openDrawer,
+      onNotificationTap: widget.onNotificationTap,
+      onSecurityTap: widget.onSecurityTap,
+      notificationCount: widget.notificationCount,
+      body: loading
+          ? const PromaxProgressLoading(message: "در حال دریافت لیست لوازم جانبی...")
+          : RefreshIndicator(
+              onRefresh: load,
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  // کارت جامع آمار و ارزش ریالی انبار جانبی
+                  Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF311042), Color(0xFF581C87)],
+                        begin: Alignment.topRight,
+                        end: Alignment.bottomLeft,
+                      ),
+                      borderRadius: BorderRadius.circular(22),
+                      boxShadow: [
+                        BoxShadow(color: Colors.purple.withOpacity(0.2), blurRadius: 10, offset: const Offset(0, 4)),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text("ارزش کل انبار لوازم جانبی", style: TextStyle(color: Colors.white70, fontSize: 11.5)),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(color: Colors.purple.shade400, borderRadius: BorderRadius.circular(10)),
+                              child: Text("$totalStockCount قلم موجود", style: const TextStyle(color: Colors.white, fontSize: 9.5, fontWeight: FontWeight.bold)),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text("${formatToman(totalStockValue)} تومان", style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+                        ),
+                        const Divider(color: Colors.white24, height: 20),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text("تعداد کل کالاها: ${accessories.length} مدل", style: const TextStyle(color: Colors.white70, fontSize: 11.5)),
+                            Text("سود کلی فروش: ${formatToman(totalProfitAcc)} ت", style: const TextStyle(color: Color(0xFFFDE047), fontWeight: FontWeight.bold, fontSize: 12.5)),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // کادر جستجوی زنده بر اساس نام و بارکد
+                  TextField(
+                    onChanged: (v) => setState(() => searchQuery = v),
+                    decoration: InputDecoration(
+                      hintText: "جستجوی کالا بر اساس نام یا بارکد...",
+                      prefixIcon: const Icon(Icons.search),
+                      suffixIcon: IconButton(
+                        icon: const Icon(Icons.qr_code_scanner, color: PromaxColors.blueAction),
+                        onPressed: () => openSafeScanner(context, (code) {
+                          setState(() => searchQuery = code);
+                        }),
+                      ),
+                      filled: true,
+                      fillColor: Colors.white,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: PromaxColors.fieldBorder)),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // دکمه افزودن کالا
+                  FilledButton.icon(
+                    onPressed: _showAddDialog,
+                    icon: const Icon(Icons.add),
+                    label: const Text("افزودن کالای جانبی جدید"),
+                    style: FilledButton.styleFrom(backgroundColor: PromaxColors.blueAction, minimumSize: const Size.fromHeight(48), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // لیست اقلام
+                  if (filteredAccessories.isEmpty)
+                    const Padding(padding: EdgeInsets.all(24), child: Center(child: Text("کالایی با این مشخصات یافت نشد", style: TextStyle(color: Colors.grey))))
+                  else
+                    ...filteredAccessories.map((item) {
+                      final int currentStock = int.tryParse(item['stock']?.toString() ?? '0') ?? 0;
+                      final String barcode = (item['barcode'] != null && item['barcode'].toString().isNotEmpty) ? " | بارکد: ${item['barcode']}" : "";
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        child: ListTile(
+                          leading: const CircleAvatar(backgroundColor: Color(0xFFF3E8FF), child: Icon(Icons.headphones, color: Colors.purple)),
+                          title: Text(item['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                          subtitle: Text("موجودی: $currentStock عدد | فروش: ${formatToman(item['sale_price'])} ت$barcode", style: const TextStyle(fontSize: 10.5, color: PromaxColors.textMuted)),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(icon: const Icon(Icons.edit, size: 20, color: Colors.blueGrey), onPressed: () => _showEditAccessoryDialog(item)),
+                              ElevatedButton(
+                                onPressed: currentStock > 0 ? () => _showSellDialog(item) : null,
+                                style: ElevatedButton.styleFrom(backgroundColor: PromaxColors.greenAction, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+                                child: const Text("فروش"),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }),
+                ],
+              ),
+            ),
+    );
+  }
+}
   }
 
   void _showSellDialog(Map<String, dynamic> item) {
