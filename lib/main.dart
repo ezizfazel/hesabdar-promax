@@ -3309,7 +3309,7 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
     setState(() => loading = true);
     try {
       final res = await http.get(Uri.parse("$serverUrl?action=get_accessories"));
-      final summaryRes = await http.get(Uri.parse("$serverUrl?action=get_summary&period=all"));
+      final summaryRes = await http.get(Uri.parse("$serverUrl?action=get_summary&period=this_month"));
 
       if (res.statusCode == 200) {
         final d = jsonDecode(res.body);
@@ -3509,7 +3509,6 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // محاسبات زنده آمار انبار لوازم جانبی
     int totalStockCount = 0;
     int totalStockValue = 0;
 
@@ -3520,7 +3519,6 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
       totalStockValue += (s * buy);
     }
 
-    // فیلتر بر اساس نام یا بارکد
     final filteredAccessories = accessories.where((item) {
       final q = searchQuery.toLowerCase().trim();
       if (q.isEmpty) return true;
@@ -3545,7 +3543,6 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
-                  // کارت جامع آمار و ارزش ریالی انبار جانبی
                   Container(
                     padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(
@@ -3583,15 +3580,13 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text("تعداد کل کالاها: ${accessories.length} مدل", style: const TextStyle(color: Colors.white70, fontSize: 11.5)),
-                            Text("سود کلی فروش: ${formatToman(totalProfitAcc)} ت", style: const TextStyle(color: Color(0xFFFDE047), fontWeight: FontWeight.bold, fontSize: 12.5)),
+                            Text("سود ماه جاری: ${formatToman(totalProfitAcc)} ت", style: const TextStyle(color: Color(0xFFFDE047), fontWeight: FontWeight.bold, fontSize: 12.5)),
                           ],
                         ),
                       ],
                     ),
                   ),
                   const SizedBox(height: 12),
-
-                  // کادر جستجوی زنده بر اساس نام و بارکد
                   TextField(
                     onChanged: (v) => setState(() => searchQuery = v),
                     decoration: InputDecoration(
@@ -3610,8 +3605,6 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
                     ),
                   ),
                   const SizedBox(height: 12),
-
-                  // دکمه افزودن کالا
                   FilledButton.icon(
                     onPressed: _showAddDialog,
                     icon: const Icon(Icons.add),
@@ -3619,8 +3612,6 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
                     style: FilledButton.styleFrom(backgroundColor: PromaxColors.blueAction, minimumSize: const Size.fromHeight(48), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
                   ),
                   const SizedBox(height: 14),
-
-                  // لیست اقلام
                   if (filteredAccessories.isEmpty)
                     const Padding(padding: EdgeInsets.all(24), child: Center(child: Text("کالایی با این مشخصات یافت نشد", style: TextStyle(color: Colors.grey))))
                   else
@@ -3648,112 +3639,6 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
                         ),
                       );
                     }),
-                ],
-              ),
-            ),
-    );
-  }
-}
-  }
-
-  void _showSellDialog(Map<String, dynamic> item) {
-    final qtyCtl = TextEditingController(text: "1");
-    final customPriceCtl = TextEditingController(text: formatToman(item['sale_price']));
-    final buyerCtl = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text("فروش سریع: ${item['name']}"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text("موجودی: ${item['stock']} عدد | قیمت: ${formatToman(item['sale_price'])} ت"),
-            const SizedBox(height: 8),
-            TextField(controller: qtyCtl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: "تعداد فروش")),
-            const SizedBox(height: 8),
-            TextField(
-              controller: customPriceCtl,
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly, CurrencyInputFormatter()],
-              decoration: const InputDecoration(labelText: "قیمت نهایی فروش هر عدد (تومان)", helperText: "در صورت تخفیف مبلغ را تغییر دهید"),
-            ),
-            const SizedBox(height: 8),
-            TextField(controller: buyerCtl, decoration: const InputDecoration(labelText: "نام خریدار (اختیاری)")),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("انصراف")),
-          FilledButton(
-            onPressed: () async {
-              final finalPrice = int.tryParse(customPriceCtl.text.replaceAll(',', '')) ?? item['sale_price'];
-              await http.post(
-                Uri.parse("$serverUrl?action=sell_accessory"),
-                headers: {"Content-Type": "application/json"},
-                body: jsonEncode({
-                  "accessory_id": item['id'],
-                  "quantity": int.parse(qtyCtl.text),
-                  "custom_sale_price": finalPrice,
-                  "buyer_name": buyerCtl.text,
-                  "admin_name": widget.adminData['full_name'],
-                }),
-              );
-              if (ctx.mounted) Navigator.pop(ctx);
-              load();
-            },
-            child: const Text("ثبت فروش"),
-          ),
-        ],
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return PromaxPageLayout(
-      title: "لوازم جانبی و اکسسوری",
-      adminName: widget.adminData['full_name'],
-      subtitle: "مدیریت قاب، گلس، شارژر و کالاهای بدون IMEI",
-      openDrawer: widget.openDrawer,
-      onNotificationTap: widget.onNotificationTap,
-      onSecurityTap: widget.onSecurityTap,
-      notificationCount: widget.notificationCount,
-      body: loading
-          ? const PromaxProgressLoading(message: "در حال دریافت لیست لوازم جانبی...")
-          : RefreshIndicator(
-              onRefresh: load,
-              child: ListView(
-                padding: const EdgeInsets.all(20),
-                children: [
-                  FilledButton.icon(
-                    onPressed: _showAddDialog,
-                    icon: const Icon(Icons.add),
-                    label: const Text("افزودن کالای جانبی به انبار"),
-                    style: FilledButton.styleFrom(backgroundColor: PromaxColors.blueAction, minimumSize: const Size.fromHeight(50)),
-                  ),
-                  const SizedBox(height: 16),
-                  ...accessories.map((item) {
-                    final int currentStock = int.tryParse(item['stock']?.toString() ?? '0') ?? 0;
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 10),
-                      child: ListTile(
-                        leading: const CircleAvatar(backgroundColor: Color(0xFFEFF6FF), child: Icon(Icons.headphones, color: PromaxColors.blueAction)),
-                        title: Text(item['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                        subtitle: Text("موجودی: $currentStock | خرید: ${formatToman(item['buy_price'])} | فروش مصوب: ${formatToman(item['sale_price'])} ت", style: const TextStyle(fontSize: 10.5)),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(icon: const Icon(Icons.edit, size: 20, color: Colors.blueGrey), onPressed: () => _showEditAccessoryDialog(item)),
-                            ElevatedButton(
-                              onPressed: currentStock > 0 ? () => _showSellDialog(item) : null,
-                              style: ElevatedButton.styleFrom(backgroundColor: PromaxColors.greenAction, foregroundColor: Colors.white),
-                              child: const Text("فروش"),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  }),
                 ],
               ),
             ),
