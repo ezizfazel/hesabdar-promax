@@ -14,7 +14,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'invoice.dart';
 
 const String serverUrl = "https://promaxmobile.ir/api.php";
-const String appVersion = "2.6.0";
+const String appVersion = "2.8.0";
 const String developerName = "ezizfd";
 
 const List<String> popularBrands = [
@@ -273,7 +273,7 @@ class _PromaxProgressLoadingState extends State<PromaxProgressLoading>
   }
 }
 
-// ساختار هدر یکپارچه برای تمام صفحات
+// ساختار هدر یکپارچه
 class PromaxPageLayout extends StatelessWidget {
   final String title;
   final String adminName;
@@ -311,9 +311,7 @@ class PromaxPageLayout extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
-                        ),
+                        gradient: const LinearGradient(colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)]),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(Icons.bolt_rounded, color: Colors.white, size: 22),
@@ -322,23 +320,8 @@ class PromaxPageLayout extends StatelessWidget {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          "PROMAX",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w900,
-                            fontSize: 17,
-                            letterSpacing: 1.5,
-                          ),
-                        ),
-                        Text(
-                          "v$appVersion | by $developerName",
-                          style: const TextStyle(
-                            color: Color(0xFF93C5FD),
-                            fontSize: 9.5,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                        const Text("PROMAX", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 17, letterSpacing: 1.5)),
+                        Text("v$appVersion | by $developerName", style: const TextStyle(color: Color(0xFF93C5FD), fontSize: 9.5, fontWeight: FontWeight.bold)),
                       ],
                     ),
                   ],
@@ -350,11 +333,7 @@ class PromaxPageLayout extends StatelessWidget {
                         onTap: onSecurityTap,
                         child: Container(
                           padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.12),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.white24),
-                          ),
+                          decoration: BoxDecoration(color: Colors.white.withOpacity(0.12), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white24)),
                           child: const Icon(Icons.security_rounded, color: Colors.white, size: 22),
                         ),
                       ),
@@ -367,31 +346,16 @@ class PromaxPageLayout extends StatelessWidget {
                         children: [
                           Container(
                             padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.12),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.white24),
-                            ),
+                            decoration: BoxDecoration(color: Colors.white.withOpacity(0.12), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white24)),
                             child: const Icon(Icons.notifications_none_rounded, color: Colors.white, size: 24),
                           ),
                           if (notificationCount > 0)
                             Positioned(
-                              top: -4,
-                              right: -4,
+                              top: -4, right: -4,
                               child: Container(
                                 padding: const EdgeInsets.all(4),
-                                decoration: const BoxDecoration(
-                                  color: Colors.red,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Text(
-                                  "$notificationCount",
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
+                                decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                                child: Text("$notificationCount", style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
                               ),
                             ),
                         ],
@@ -402,11 +366,7 @@ class PromaxPageLayout extends StatelessWidget {
                       onTap: openDrawer,
                       child: Container(
                         padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.12),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.white24),
-                        ),
+                        decoration: BoxDecoration(color: Colors.white.withOpacity(0.12), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white24)),
                         child: const Icon(Icons.menu_rounded, color: Colors.white, size: 24),
                       ),
                     ),
@@ -422,24 +382,12 @@ class PromaxPageLayout extends StatelessWidget {
                 RichText(
                   text: TextSpan(
                     text: "$title ",
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                    children: [
-                      TextSpan(
-                        text: "($adminName)",
-                        style: const TextStyle(color: Color(0xFF60A5FA)),
-                      ),
-                    ],
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                    children: [TextSpan(text: "($adminName)", style: const TextStyle(color: Color(0xFF60A5FA)))],
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: const TextStyle(fontSize: 11, color: Colors.white70),
-                ),
+                Text(subtitle, style: const TextStyle(fontSize: 11, color: Colors.white70)),
               ],
             ),
           ),
@@ -451,10 +399,7 @@ class PromaxPageLayout extends StatelessWidget {
                 color: PromaxColors.cardBackground,
                 borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
               ),
-              child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-                child: body,
-              ),
+              child: ClipRRect(borderRadius: const BorderRadius.vertical(top: Radius.circular(32)), child: body),
             ),
           ),
         ],
@@ -463,14 +408,7 @@ class PromaxPageLayout extends StatelessWidget {
   }
 }
 
-Widget _buildInput({
-  required TextEditingController controller,
-  required String hint,
-  required IconData prefixIcon,
-  bool isNumber = false,
-  bool isPhone = false,
-  Function(String)? onChanged,
-}) {
+Widget _buildInput({required TextEditingController controller, required String hint, required IconData prefixIcon, bool isNumber = false, bool isPhone = false, Function(String)? onChanged}) {
   return TextField(
     controller: controller,
     keyboardType: isNumber || isPhone ? TextInputType.number : TextInputType.text,
@@ -478,23 +416,9 @@ Widget _buildInput({
     onChanged: onChanged,
     style: const TextStyle(fontSize: 13),
     decoration: InputDecoration(
-      hintText: hint,
-      prefixIcon: Icon(prefixIcon, color: PromaxColors.textMuted, size: 20),
-      filled: true,
-      fillColor: Colors.white,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: PromaxColors.fieldBorder, width: 1.2),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: PromaxColors.fieldBorder, width: 1.2),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: PromaxColors.blueAction, width: 1.5),
-      ),
+      hintText: hint, prefixIcon: Icon(prefixIcon, color: PromaxColors.textMuted, size: 20),
+      filled: true, fillColor: Colors.white, contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: PromaxColors.fieldBorder, width: 1.2)),
     ),
   );
 }
@@ -537,37 +461,21 @@ class _CameraScannerScreenState extends State<CameraScannerScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("اسکن بارکد"),
-        backgroundColor: PromaxColors.headerGradientStart,
-        foregroundColor: Colors.white,
-      ),
+      appBar: AppBar(title: const Text("اسکن بارکد"), backgroundColor: PromaxColors.headerGradientStart, foregroundColor: Colors.white),
       body: Stack(
         alignment: Alignment.center,
         children: [
           QRView(
             key: qrKey,
             onQRViewCreated: _onQRViewCreated,
-            overlay: QrScannerOverlayShape(
-              borderColor: PromaxColors.blueAction,
-              borderRadius: 16,
-              borderLength: 30,
-              borderWidth: 6,
-              cutOutSize: 280,
-            ),
+            overlay: QrScannerOverlayShape(borderColor: PromaxColors.blueAction, borderRadius: 16, borderLength: 30, borderWidth: 6, cutOutSize: 280),
           ),
           Positioned(
             bottom: 40,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.black54,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Text(
-                "بارکد را داخل کادر بگیرید",
-                style: TextStyle(color: Colors.white, fontSize: 12),
-              ),
+              decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(20)),
+              child: const Text("بارکد را داخل کادر بگیرید", style: TextStyle(color: Colors.white, fontSize: 12)),
             ),
           )
         ],
@@ -580,13 +488,11 @@ Future<void> openSafeScanner(BuildContext context, Function(String) onFound) asy
   final status = await Permission.camera.request();
   if (!status.isGranted) return;
   if (!context.mounted) return;
-  final result = await Navigator.push(
-    context,
-    MaterialPageRoute(builder: (_) => const CameraScannerScreen()),
-  );
+  final result = await Navigator.push(context, MaterialPageRoute(builder: (_) => const CameraScannerScreen()));
   if (result != null && result is String) onFound(result);
 }
 
+// ------------------- صفحه ورود -------------------
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -716,20 +622,12 @@ class _LoginScreenState extends State<LoginScreen> {
                     color: PromaxColors.blueAction.withOpacity(0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
-                    Icons.phone_android_rounded,
-                    size: 54,
-                    color: PromaxColors.blueAction,
-                  ),
+                  child: const Icon(Icons.phone_android_rounded, size: 54, color: PromaxColors.blueAction),
                 ),
                 const SizedBox(height: 12),
                 const Text(
                   "PROMAX MOBILE",
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1.5,
-                  ),
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, letterSpacing: 1.5),
                 ),
                 Text(
                   "توسعه‌دهنده: $developerName | نسخه $appVersion",
@@ -791,6 +689,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 }
 
+// ------------------- ناوبری اصلی -------------------
 class MainNavigationScreen extends StatefulWidget {
   final Map<String, dynamic> adminData;
   const MainNavigationScreen({super.key, required this.adminData});
@@ -826,56 +725,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     } catch (_) {}
   }
 
-  void _showDirectDownloadDialog(String title, String fileType, String directUrl) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            const Icon(Icons.download_done_rounded, color: PromaxColors.blueAction),
-            const SizedBox(width: 8),
-            Text("دانلود $title"),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text("جهت دریافت مستقیم فایل، لینک زیر را در مرورگر باز کنید:", style: TextStyle(fontSize: 12)),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade100,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.grey.shade300),
-              ),
-              child: SelectableText(
-                directUrl,
-                style: const TextStyle(fontSize: 11, color: PromaxColors.blueAction, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("بستن")),
-          FilledButton.icon(
-            onPressed: () {
-              Navigator.pop(ctx);
-              Clipboard.setData(ClipboardData(text: directUrl));
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("لینک مستقیم دانلود کپی شد")),
-              );
-            },
-            icon: const Icon(Icons.copy_rounded),
-            label: const Text("کپی لینک دانلود"),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _showNotificationsSheet() {
     showModalBottomSheet(
       context: context,
@@ -884,16 +733,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       builder: (ctx) => Container(
         height: MediaQuery.of(context).size.height * 0.75,
         padding: const EdgeInsets.all(20),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-        ),
+        decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Center(
-              child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(10))),
-            ),
+            Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(10)))),
             const SizedBox(height: 14),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -954,7 +798,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     );
   }
 
-  // پنل مدیریت ادمین‌ها فقط مخصوص super_admin
   void _showAdminManagementPanel() async {
     final res = await http.get(Uri.parse("$serverUrl?action=get_admins"));
     final logRes = await http.get(Uri.parse("$serverUrl?action=get_logs"));
@@ -972,10 +815,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         builder: (context, setPanelState) => Container(
           height: MediaQuery.of(context).size.height * 0.85,
           padding: const EdgeInsets.all(20),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-          ),
+          decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
           child: DefaultTabController(
             length: 2,
             child: Column(
@@ -1242,49 +1082,19 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
     final List<Widget> accessiblePages = [
       hasAccess('analytics')
-          ? AnalyticsDashboardScreen(
-              adminData: widget.adminData,
-              openDrawer: () => _scaffoldKey.currentState?.openDrawer(),
-              onNotificationTap: _showNotificationsSheet,
-              onSecurityTap: isSuperAdmin ? _showAdminManagementPanel : null,
-              notificationCount: notifications.length,
-            )
+          ? AnalyticsDashboardScreen(adminData: widget.adminData, openDrawer: () => _scaffoldKey.currentState?.openDrawer(), onNotificationTap: _showNotificationsSheet, onSecurityTap: isSuperAdmin ? _showAdminManagementPanel : null, notificationCount: notifications.length)
           : const Scaffold(body: Center(child: Text("شما به بخش آمار دسترسی ندارید"))),
       hasAccess('buy')
-          ? BuyPhoneScreen(
-              adminData: widget.adminData,
-              openDrawer: () => _scaffoldKey.currentState?.openDrawer(),
-              onNotificationTap: _showNotificationsSheet,
-              onSecurityTap: isSuperAdmin ? _showAdminManagementPanel : null,
-              notificationCount: notifications.length,
-            )
+          ? BuyPhoneScreen(adminData: widget.adminData, openDrawer: () => _scaffoldKey.currentState?.openDrawer(), onNotificationTap: _showNotificationsSheet, onSecurityTap: isSuperAdmin ? _showAdminManagementPanel : null, notificationCount: notifications.length)
           : const Scaffold(body: Center(child: Text("شما به بخش خرید دسترسی ندارید"))),
       hasAccess('sell')
-          ? SellPhoneScreen(
-              adminData: widget.adminData,
-              openDrawer: () => _scaffoldKey.currentState?.openDrawer(),
-              onNotificationTap: _showNotificationsSheet,
-              onSecurityTap: isSuperAdmin ? _showAdminManagementPanel : null,
-              notificationCount: notifications.length,
-            )
+          ? SellPhoneScreen(adminData: widget.adminData, openDrawer: () => _scaffoldKey.currentState?.openDrawer(), onNotificationTap: _showNotificationsSheet, onSecurityTap: isSuperAdmin ? _showAdminManagementPanel : null, notificationCount: notifications.length)
           : const Scaffold(body: Center(child: Text("شما به بخش فروش دسترسی ندارید"))),
       hasAccess('inventory')
-          ? InventoryAndReportsScreen(
-              adminData: widget.adminData,
-              openDrawer: () => _scaffoldKey.currentState?.openDrawer(),
-              onNotificationTap: _showNotificationsSheet,
-              onSecurityTap: isSuperAdmin ? _showAdminManagementPanel : null,
-              notificationCount: notifications.length,
-            )
+          ? InventoryAndReportsScreen(adminData: widget.adminData, openDrawer: () => _scaffoldKey.currentState?.openDrawer(), onNotificationTap: _showNotificationsSheet, onSecurityTap: isSuperAdmin ? _showAdminManagementPanel : null, notificationCount: notifications.length)
           : const Scaffold(body: Center(child: Text("شما به بخش انبار دسترسی ندارید"))),
       hasAccess('accessories')
-          ? AccessoriesScreen(
-              adminData: widget.adminData,
-              openDrawer: () => _scaffoldKey.currentState?.openDrawer(),
-              onNotificationTap: _showNotificationsSheet,
-              onSecurityTap: isSuperAdmin ? _showAdminManagementPanel : null,
-              notificationCount: notifications.length,
-            )
+          ? AccessoriesScreen(adminData: widget.adminData, openDrawer: () => _scaffoldKey.currentState?.openDrawer(), onNotificationTap: _showNotificationsSheet, onSecurityTap: isSuperAdmin ? _showAdminManagementPanel : null, notificationCount: notifications.length)
           : const Scaffold(body: Center(child: Text("شما به بخش اکسسوری دسترسی ندارید"))),
     ];
 
@@ -1297,20 +1107,12 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             Container(
               padding: const EdgeInsets.fromLTRB(20, 50, 20, 24),
               decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [PromaxColors.headerGradientStart, PromaxColors.headerGradientEnd],
-                  begin: Alignment.topRight,
-                  end: Alignment.bottomLeft,
-                ),
+                gradient: LinearGradient(colors: [PromaxColors.headerGradientStart, PromaxColors.headerGradientEnd], begin: Alignment.topRight, end: Alignment.bottomLeft),
                 borderRadius: BorderRadius.only(bottomLeft: Radius.circular(24), bottomRight: Radius.circular(24)),
               ),
               child: Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), shape: BoxShape.circle),
-                    child: const Icon(Icons.person, color: Colors.white, size: 30),
-                  ),
+                  Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), shape: BoxShape.circle), child: const Icon(Icons.person, color: Colors.white, size: 30)),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(
@@ -1347,38 +1149,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                         _showAdminManagementPanel();
                       },
                     ),
-                  const Divider(),
-                  ListTile(
-                    leading: const Icon(Icons.file_download_outlined, color: Colors.teal),
-                    title: const Text("دانلود مستقیم اکسل (Excel)"),
-                    onTap: () {
-                      Navigator.pop(context);
-                      _showDirectDownloadDialog("اکسل فروشگاه", "Excel/CSV", "$serverUrl?action=export_excel");
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.cloud_download_outlined, color: Colors.deepPurple),
-                    title: const Text("دانلود مستقیم بک‌آپ دیتابیس (SQL)"),
-                    onTap: () {
-                      Navigator.pop(context);
-                      _showDirectDownloadDialog("پشتیبان دیتابیس", "SQL Backup", "$serverUrl?action=backup_db");
-                    },
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              child: Column(
-                children: [
-                  const Text("حسابدار پرومکس موبایل", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: PromaxColors.textMuted)),
-                  const SizedBox(height: 2),
-                  Text("نسخه $appVersion | توسعه‌دهنده: $developerName", style: const TextStyle(fontSize: 10, color: Color(0xFF94A3B8), fontWeight: FontWeight.w600)),
                 ],
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              padding: const EdgeInsets.all(16),
               child: ListTile(
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 tileColor: Colors.red.shade50,
@@ -1393,10 +1168,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       body: accessiblePages[_currentIndex],
       bottomNavigationBar: Container(
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -4))],
-        ),
+        decoration: BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -4))]),
         child: SafeArea(
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -1425,10 +1197,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOut,
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-            decoration: BoxDecoration(
-              color: isSelected ? const Color(0xFFE0E7FF) : Colors.transparent,
-              borderRadius: BorderRadius.circular(16),
-            ),
+            decoration: BoxDecoration(color: isSelected ? const Color(0xFFE0E7FF) : Colors.transparent, borderRadius: BorderRadius.circular(16)),
             child: Icon(icon, color: isSelected ? PromaxColors.blueAction : PromaxColors.textMuted, size: 22),
           ),
           const SizedBox(height: 2),
@@ -1439,7 +1208,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   }
 }
 
-// ==================== داشبورد آمار مالی کامل ====================
+// ------------------- داشبورد آمار مالی کامل و تفکیک‌شده بخش موبایل -------------------
 class AnalyticsDashboardScreen extends StatefulWidget {
   final Map<String, dynamic> adminData;
   final VoidCallback openDrawer;
@@ -1513,6 +1282,59 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
     }
   }
 
+  void _showPayDebtDialog(Map<String, dynamic> debtor) {
+    final payCtl = TextEditingController(text: formatToman(debtor['remaining_amount']));
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text("ثبت تسویه بدهی: ${debtor['buyer_name']}"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("دستگاه: ${debtor['brand']} ${debtor['model']}", style: const TextStyle(fontSize: 12, color: PromaxColors.textMuted)),
+            const SizedBox(height: 4),
+            Text("مانده بدهی فعلی: ${formatToman(debtor['remaining_amount'])} تومان", style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.red)),
+            const SizedBox(height: 12),
+            TextField(
+              controller: payCtl,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly, CurrencyInputFormatter()],
+              decoration: const InputDecoration(labelText: "مبلغ دریافتی (تومان)", border: OutlineInputBorder()),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("انصراف")),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: PromaxColors.greenAction),
+            onPressed: () async {
+              final int cleanPay = int.tryParse(payCtl.text.replaceAll(',', '')) ?? 0;
+              if (cleanPay <= 0) return;
+              final res = await http.post(
+                Uri.parse("$serverUrl?action=pay_debt"),
+                headers: {"Content-Type": "application/json"},
+                body: jsonEncode({
+                  "phone_id": debtor['id'],
+                  "amount": cleanPay,
+                  "admin_name": widget.adminData['full_name'],
+                }),
+              );
+              final d = jsonDecode(res.body);
+              if (ctx.mounted) Navigator.pop(ctx);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(d['message'] ?? 'ثبت شد')));
+                loadAnalytics();
+              }
+            },
+            child: const Text("ثبت دریافت وجه"),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showEditBankBalanceDialog() {
     final balCtl = TextEditingController(text: formatToman(data?['bank_balance'] ?? 0));
     showDialog(
@@ -1571,7 +1393,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
               children: [
                 DropdownButtonFormField<String>(
                   value: cat,
-                  decoration: const InputDecoration(labelText: "دسته‌بندی هزینه", border: OutlineInputBorder()),
+                  decoration: const InputDecoration(labelText: "دسته‌‌بندی هزینه", border: OutlineInputBorder()),
                   items: ['اجاره مغازه', 'قبوض آب/برق/گاز', 'برداشت سود شخصی', 'پیک و اسنپ', 'حقوق و شاگرد', 'متفرقه'].map((c) => DropdownMenuItem(value: c, child: Text(c, style: const TextStyle(fontSize: 12)))).toList(),
                   onChanged: (v) => setDialogState(() => cat = v!),
                 ),
@@ -1623,11 +1445,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
     final Uri launchUri = Uri(scheme: 'tel', path: cleanPhone);
     try {
       await launchUrl(launchUri);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("امکان برقراری تماس وجود ندارد: $phoneNumber")));
-      }
-    }
+    } catch (_) {}
   }
 
   void _showExpenseDetailDialog(Map<String, dynamic> item) {
@@ -1656,7 +1474,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
             Text(
               (item['description'] != null && item['description'].toString().trim().isNotEmpty)
                   ? item['description']
-                  : "توضیحاتی برای این هزینه ثبت نشده است.",
+                  : "توضیحاتی ثبت نشده است.",
               style: const TextStyle(fontSize: 12, height: 1.5),
             ),
           ],
@@ -1691,15 +1509,15 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
     final int totalExpenses = data?['total_expenses'] ?? 0;
 
     return PromaxPageLayout(
-      title: "گزارش‌ها و آمارها",
+      title: "گزارش‌ها و آمارها (موبایل)",
       adminName: widget.adminData['full_name'],
-      subtitle: "محاسبه زنده عملکرد بدون خطا",
+      subtitle: "نقدینگی و عملکرد مالی اختصاصی موبایل",
       openDrawer: widget.openDrawer,
       onNotificationTap: widget.onNotificationTap,
       onSecurityTap: widget.onSecurityTap,
       notificationCount: widget.notificationCount,
       body: loading
-          ? const PromaxProgressLoading(message: "در حال محاسبه زنده آمار...")
+          ? const PromaxProgressLoading(message: "در حال محاسبه زنده آمار موبایل...")
           : hasError
               ? Center(
                   child: Column(
@@ -1718,7 +1536,6 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
                   child: ListView(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                     children: [
-                      // فیلترهای زمانی
                       SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
                         child: Row(
@@ -1742,7 +1559,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
                       ),
                       const SizedBox(height: 14),
 
-                      // کارت نقدینگی کل
+                      // کارت نقدینگی اختصاصی بخش موبایل
                       Container(
                         padding: const EdgeInsets.all(18),
                         decoration: BoxDecoration(
@@ -1753,7 +1570,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text("سرمایه و نقدینگی کل فروشگاه", style: TextStyle(color: Colors.white70, fontSize: 11.5)),
+                            const Text("نقدینگی و سرمایه بخش موبایل (کارت‌ها + انبار گوشی)", style: TextStyle(color: Colors.white70, fontSize: 11.5)),
                             const SizedBox(height: 6),
                             FittedBox(fit: BoxFit.scaleDown, child: Text("${formatToman(totalLiquidity)} تومان", style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold))),
                             const Divider(color: Colors.white24, height: 20),
@@ -1790,14 +1607,36 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
                       ),
                       const SizedBox(height: 14),
 
-                      // بخش اختصاصی برداشت سود و هزینه‌ها
+                      // کارت‌های آماری فروش و سود موبایل
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _statCard("فروش موبایل ($selectedPeriodTitle)", "${formatToman(data?['phone_sales'])} ت", PromaxColors.blueAction, Icons.phone_android),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: _statCard("سود موبایل ($selectedPeriodTitle)", "${formatToman(data?['phone_profit'])} ت", PromaxColors.greenAction, Icons.monetization_on_rounded),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _statCard("موجودی انبار گوشی", "${data?['phone_stock_count']} دستگاه", Colors.indigo, Icons.inventory_2),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: _statCard("ارزش ریالی انبار گوشی", "${formatToman(data?['phone_stock_value'])} ت", Colors.teal, Icons.account_balance),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
+                      // بخش برداشت سود و هزینه‌ها
                       Container(
                         padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: PromaxColors.fieldBorder),
-                        ),
+                        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: PromaxColors.fieldBorder)),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -1859,7 +1698,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
                       ),
                       const SizedBox(height: 14),
 
-                      // کارت اختصاصی بدهکاران با دکمه تماس سریع
+                      // کارت اختصاصی بدهکاران با تسویه و تماس سریع
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: PromaxColors.fieldBorder)),
@@ -1900,50 +1739,30 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
                                             ],
                                           ),
                                         ),
-                                        const SizedBox(width: 8),
-                                        FilledButton.icon(
-                                          onPressed: () => _makePhoneCall(d['buyer_phone']),
-                                          icon: const Icon(Icons.phone_in_talk, size: 16),
-                                          label: const Text("تماس سریع", style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold)),
-                                          style: FilledButton.styleFrom(backgroundColor: PromaxColors.greenAction, padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6)),
-                                        ),
+                                        const SizedBox(width: 6),
+                                        Row(
+                                          children: [
+                                            FilledButton(
+                                              onPressed: () => _showPayDebtDialog(d),
+                                              style: FilledButton.styleFrom(backgroundColor: Colors.blue.shade700, padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4)),
+                                              child: const Text("تسویه", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                                            ),
+                                            const SizedBox(width: 4),
+                                            IconButton(
+                                              onPressed: () => _makePhoneCall(d['buyer_phone']),
+                                              icon: const Icon(Icons.phone_in_talk, size: 18, color: Colors.green),
+                                            ),
+                                          ],
+                                        )
                                       ],
                                     ),
                                   )),
                           ],
                         ),
                       ),
-                      const SizedBox(height: 14),
-
-                      // آمار مجزای موبایل و اکسسوری
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _categoryKpi(
-                              title: "موبایل ($selectedPeriodTitle)",
-                              sales: "${formatToman(data?['phone_sales'])} ت",
-                              profit: "${formatToman(data?['phone_profit'])} ت",
-                              stock: "${data?['phone_stock_count']} موجود",
-                              color: PromaxColors.blueAction,
-                              icon: Icons.phone_android,
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: _categoryKpi(
-                              title: "اکسسوری ($selectedPeriodTitle)",
-                              sales: "${formatToman(data?['acc_sales'])} ت",
-                              profit: "${formatToman(data?['acc_profit'])} ت",
-                              stock: "${data?['acc_stock_count']} عدد موجود",
-                              color: Colors.deepPurple,
-                              icon: Icons.headphones,
-                            ),
-                          ),
-                        ],
-                      ),
                       const SizedBox(height: 16),
 
-                      // لیست سفارش‌ها و خریداران بدون سرریز شدن
+                      // لیست سفارش‌ها
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: PromaxColors.fieldBorder)),
@@ -1993,23 +1812,14 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
                       ),
                       const SizedBox(height: 16),
 
-                      // نمودار خطی مقایسه فروش و سود
                       _buildSalesAndProfitLineChart(),
                       const SizedBox(height: 16),
-
-                      // نمودار دونات سهم برندها
                       _buildBrandDonutChart(),
                       const SizedBox(height: 16),
-
-                      // نمودار میله‌ای مقایسه هفتگی
                       _buildWeeklyBarChart(),
                       const SizedBox(height: 16),
-
-                      // جدول کالاهای کم‌موجودی
                       _buildLowStockTable(),
                       const SizedBox(height: 16),
-
-                      // باکس هوشمند
                       _buildRecentActivitiesAndAiSummary(),
                       const SizedBox(height: 20),
                     ],
@@ -2018,20 +1828,16 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
     );
   }
 
-  Widget _categoryKpi({required String title, required String sales, required String profit, required String stock, required Color color, required IconData icon}) {
+  Widget _statCard(String title, String val, Color color, IconData icon) {
     return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), border: Border.all(color: PromaxColors.fieldBorder)),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: PromaxColors.fieldBorder)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(children: [Icon(icon, color: color, size: 18), const SizedBox(width: 6), Expanded(child: Text(title, overflow: TextOverflow.ellipsis, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: color)))]),
-          const Divider(height: 14),
-          FittedBox(fit: BoxFit.scaleDown, child: Text("فروش: $sales", style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold))),
-          const SizedBox(height: 2),
-          FittedBox(fit: BoxFit.scaleDown, child: Text("سود: $profit", style: const TextStyle(fontSize: 10.5, color: PromaxColors.greenAction, fontWeight: FontWeight.bold))),
-          const SizedBox(height: 2),
-          Text(stock, style: const TextStyle(fontSize: 10, color: PromaxColors.textMuted)),
+          Row(children: [Icon(icon, color: color, size: 16), const SizedBox(width: 4), Expanded(child: Text(title, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.bold)))]),
+          const SizedBox(height: 6),
+          FittedBox(fit: BoxFit.scaleDown, child: Text(val, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold))),
         ],
       ),
     );
@@ -2400,7 +2206,7 @@ class DonutChartPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-// ==================== انبار دو تبه با مشخصات کامل ====================
+// ------------------- بخش انبار گوشی -------------------
 class InventoryAndReportsScreen extends StatefulWidget {
   final Map<String, dynamic> adminData;
   final VoidCallback openDrawer;
@@ -2689,7 +2495,7 @@ class _InventoryAndReportsScreenState extends State<InventoryAndReportsScreen> {
                   child: TextField(
                     onChanged: (v) => setState(() => searchQuery = v),
                     decoration: InputDecoration(
-                      hintText: "جستجو در انبار (مدل، سریال، فروشنده...)",
+                      hintText: "جستجو با مدل، سریال، نام فروشنده یا خریدار...",
                       prefixIcon: const Icon(Icons.search),
                       filled: true, fillColor: Colors.white,
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -2780,7 +2586,7 @@ class _InventoryAndReportsScreenState extends State<InventoryAndReportsScreen> {
   }
 }
 
-// ==================== صفحه خرید گوشی ====================
+// ------------------- صفحه ثبت خرید گوشی -------------------
 class BuyPhoneScreen extends StatefulWidget {
   final Map<String, dynamic> adminData;
   final VoidCallback openDrawer;
@@ -2975,7 +2781,7 @@ class _BuyPhoneScreenState extends State<BuyPhoneScreen> {
   }
 }
 
-// ==================== فروش گوشی با اعتبارسنجی کامل ====================
+// ------------------- صفحه ثبت فروش گوشی -------------------
 class SellPhoneScreen extends StatefulWidget {
   final Map<String, dynamic> adminData;
   final VoidCallback openDrawer;
@@ -3008,7 +2814,7 @@ class _SellPhoneScreenState extends State<SellPhoneScreen> {
     return total - paid;
   }
 
- Future<void> submit() async {
+  Future<void> submit() async {
     final String cleanImei = imeiCtl.text.trim();
     final String cleanPriceStr = priceCtl.text.replaceAll(',', '').trim();
 
@@ -3057,24 +2863,16 @@ class _SellPhoneScreenState extends State<SellPhoneScreen> {
           "description": descCtl.text.trim(),
           "registry_status": selectedRegistry,
           "hamta_verified": hamtaVerified ? 1 : 0,
-          "credit_due_shamsi": creditDueShamsi ?? '',
+          "credit_due_shamsi": creditDueShamsi,
           "sale_time": "$timeNow - ${now.year}/${now.month}/${now.day}",
           "admin_name": widget.adminData['full_name'],
         }),
-      ).timeout(const Duration(seconds: 15));
+      );
 
+      final data = jsonDecode(res.body);
       setState(() => isSubmitting = false);
 
       if (!mounted) return;
-
-      if (res.body.trim().isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("سرور پاسخی ارسال نکرد. لطفاً اسکریپت api.php را بررسی فرمایید.")),
-        );
-        return;
-      }
-
-      final data = jsonDecode(res.body);
 
       if (data['status'] == 'success') {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -3271,8 +3069,7 @@ class _SellPhoneScreenState extends State<SellPhoneScreen> {
   }
 }
 
-// ==================== صفحه لوازم جانبی ====================
-// ==================== صفحه پیشرفته لوازم جانبی با جستجو و کارت آمار مالی ====================
+// ------------------- صفحه اکسسوری با داشبورد آمار مالی کامل و مستقل درون صفحه -------------------
 class AccessoriesScreen extends StatefulWidget {
   final Map<String, dynamic> adminData;
   final VoidCallback openDrawer;
@@ -3294,10 +3091,20 @@ class AccessoriesScreen extends StatefulWidget {
 }
 
 class _AccessoriesScreenState extends State<AccessoriesScreen> {
+  final Map<String, String> periodKeys = {
+    'امروز': 'today',
+    'دیروز': 'yesterday',
+    '۷ روز اخیر': '7days',
+    '۳۰ روز اخیر': '30days',
+    'این ماه': 'this_month',
+    'ماه قبل': 'last_month',
+  };
+
+  String selectedPeriodTitle = 'این ماه';
   List<dynamic> accessories = [];
   String searchQuery = "";
   bool loading = true;
-  int totalProfitAcc = 0;
+  Map<String, dynamic>? accSummary;
 
   @override
   void initState() {
@@ -3307,23 +3114,22 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
 
   Future<void> load() async {
     setState(() => loading = true);
+    final key = periodKeys[selectedPeriodTitle] ?? 'this_month';
     try {
       final res = await http.get(Uri.parse("$serverUrl?action=get_accessories"));
-      final summaryRes = await http.get(Uri.parse("$serverUrl?action=get_summary&period=this_month"));
+      final summaryRes = await http.get(Uri.parse("$serverUrl?action=get_acc_summary&period=$key"));
 
       if (res.statusCode == 200) {
         final d = jsonDecode(res.body);
-        int profit = 0;
+        Map<String, dynamic>? sMap;
         if (summaryRes.statusCode == 200) {
           final s = jsonDecode(summaryRes.body);
-          if (s['status'] == 'success') {
-            profit = s['data']['acc_profit'] ?? 0;
-          }
+          if (s['status'] == 'success') sMap = s['data'];
         }
 
         setState(() {
           accessories = d['data'] ?? [];
-          totalProfitAcc = profit;
+          accSummary = sMap;
           loading = false;
         });
       } else {
@@ -3363,7 +3169,7 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
                 ],
               ),
               const SizedBox(height: 8),
-              TextField(controller: catCtl, decoration: const InputDecoration(labelText: "دسته‌بندی")),
+              TextField(controller: catCtl, decoration: const InputDecoration(labelText: "دسته‌‌بندی")),
               TextField(controller: stockCtl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: "تعداد موجودی")),
               TextField(controller: buyCtl, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly, CurrencyInputFormatter()], decoration: const InputDecoration(labelText: "قیمت خرید (تومان)")),
               TextField(controller: saleCtl, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly, CurrencyInputFormatter()], decoration: const InputDecoration(labelText: "قیمت فروش مصوب (تومان)")),
@@ -3509,15 +3315,10 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    int totalStockCount = 0;
-    int totalStockValue = 0;
-
-    for (var it in accessories) {
-      int s = int.tryParse(it['stock']?.toString() ?? '0') ?? 0;
-      int buy = int.tryParse(it['buy_price']?.toString() ?? '0') ?? 0;
-      totalStockCount += s;
-      totalStockValue += (s * buy);
-    }
+    final int accStockCount = accSummary?['acc_stock_count'] ?? 0;
+    final int accStockValue = accSummary?['acc_stock_value'] ?? 0;
+    final int accSales = accSummary?['acc_sales'] ?? 0;
+    final int accProfit = accSummary?['acc_profit'] ?? 0;
 
     final filteredAccessories = accessories.where((item) {
       final q = searchQuery.toLowerCase().trim();
@@ -3531,30 +3332,48 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
     return PromaxPageLayout(
       title: "لوازم جانبی و اکسسوری",
       adminName: widget.adminData['full_name'],
-      subtitle: "مدیریت و آمار ارزش انبار و کالاهای بدون IMEI",
+      subtitle: "داشبورد اختصاصی و انبار کالاهای جانبی",
       openDrawer: widget.openDrawer,
       onNotificationTap: widget.onNotificationTap,
       onSecurityTap: widget.onSecurityTap,
       notificationCount: widget.notificationCount,
       body: loading
-          ? const PromaxProgressLoading(message: "در حال دریافت لیست لوازم جانبی...")
+          ? const PromaxProgressLoading(message: "در حال محاسبه آمار اکسسوری...")
           : RefreshIndicator(
               onRefresh: load,
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: periodKeys.keys.map((p) {
+                        final isSel = selectedPeriodTitle == p;
+                        return Padding(
+                          padding: const EdgeInsets.only(left: 6),
+                          child: ChoiceChip(
+                            label: Text(p, style: TextStyle(fontSize: 11, fontWeight: isSel ? FontWeight.bold : FontWeight.normal, color: isSel ? Colors.white : Colors.black87)),
+                            selected: isSel,
+                            selectedColor: Colors.purple.shade700,
+                            backgroundColor: Colors.white,
+                            onSelected: (_) {
+                              setState(() => selectedPeriodTitle = p);
+                              load();
+                            },
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // کارت جامع نقدینگی و ارزش انبار اختصاصی اکسسوری
                   Container(
                     padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF311042), Color(0xFF581C87)],
-                        begin: Alignment.topRight,
-                        end: Alignment.bottomLeft,
-                      ),
+                      gradient: const LinearGradient(colors: [Color(0xFF311042), Color(0xFF581C87)], begin: Alignment.topRight, end: Alignment.bottomLeft),
                       borderRadius: BorderRadius.circular(22),
-                      boxShadow: [
-                        BoxShadow(color: Colors.purple.withOpacity(0.2), blurRadius: 10, offset: const Offset(0, 4)),
-                      ],
+                      boxShadow: [BoxShadow(color: Colors.purple.withOpacity(0.2), blurRadius: 10, offset: const Offset(0, 4))],
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -3566,27 +3385,25 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(color: Colors.purple.shade400, borderRadius: BorderRadius.circular(10)),
-                              child: Text("$totalStockCount قلم موجود", style: const TextStyle(color: Colors.white, fontSize: 9.5, fontWeight: FontWeight.bold)),
+                              child: Text("$accStockCount قلم موجود", style: const TextStyle(color: Colors.white, fontSize: 9.5, fontWeight: FontWeight.bold)),
                             ),
                           ],
                         ),
                         const SizedBox(height: 6),
-                        FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text("${formatToman(totalStockValue)} تومان", style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
-                        ),
+                        FittedBox(fit: BoxFit.scaleDown, child: Text("${formatToman(accStockValue)} تومان", style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold))),
                         const Divider(color: Colors.white24, height: 20),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text("تعداد کل کالاها: ${accessories.length} مدل", style: const TextStyle(color: Colors.white70, fontSize: 11.5)),
-                            Text("سود ماه جاری: ${formatToman(totalProfitAcc)} ت", style: const TextStyle(color: Color(0xFFFDE047), fontWeight: FontWeight.bold, fontSize: 12.5)),
+                            Text("فروش ($selectedPeriodTitle): ${formatToman(accSales)} ت", style: const TextStyle(color: Colors.white, fontSize: 11.5)),
+                            Text("سود خالص: ${formatToman(accProfit)} ت", style: const TextStyle(color: Color(0xFFFDE047), fontWeight: FontWeight.bold, fontSize: 12.5)),
                           ],
                         ),
                       ],
                     ),
                   ),
                   const SizedBox(height: 12),
+
                   TextField(
                     onChanged: (v) => setState(() => searchQuery = v),
                     decoration: InputDecoration(
@@ -3605,6 +3422,7 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
                     ),
                   ),
                   const SizedBox(height: 12),
+
                   FilledButton.icon(
                     onPressed: _showAddDialog,
                     icon: const Icon(Icons.add),
@@ -3612,6 +3430,7 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
                     style: FilledButton.styleFrom(backgroundColor: PromaxColors.blueAction, minimumSize: const Size.fromHeight(48), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
                   ),
                   const SizedBox(height: 14),
+
                   if (filteredAccessories.isEmpty)
                     const Padding(padding: EdgeInsets.all(24), child: Center(child: Text("کالایی با این مشخصات یافت نشد", style: TextStyle(color: Colors.grey))))
                   else
