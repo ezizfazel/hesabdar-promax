@@ -38,6 +38,8 @@ class Api {
     return {
       'Content-Type': 'application/json',
       if (hasToken) 'Authorization': 'Bearer $_token',
+      // برخی هاست‌های اشتراکی هدر Authorization را به PHP نمی‌رسانند؛ سرور این را هم می‌پذیرد.
+      if (hasToken) 'X-Auth-Token': _token!,
       ...?extra,
     };
   }
