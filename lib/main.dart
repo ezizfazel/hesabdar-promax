@@ -13,7 +13,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'api.dart';
 import 'invoice.dart';
 
-const String serverUrl = "https://promaxmobile.ir/api.php";
+const String serverUrl = String.fromEnvironment("API_URL", defaultValue: "https://promaxmobile.ir/api.php");
 const String appVersion = "2.8.0";
 const String developerName = "ezizfd";
 
@@ -88,16 +88,38 @@ String formatToman(dynamic numValue) {
       );
 }
 
+const List<String> _jalaliMonths = [
+  'فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور',
+  'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند',
+];
+
+/// تبدیل تاریخ میلادی سرور (مثل "2026-11-24 22:32:37") به شمسی خوانا: "۳ آذر ۱۴۰۵ - 22:32"
+String formatShamsi(dynamic raw, {bool withTime = true}) {
+  if (raw == null) return '-';
+  final text = raw.toString().trim();
+  if (text.isEmpty) return '-';
+  final dt = DateTime.tryParse(text.replaceFirst(' ', 'T'));
+  if (dt == null) return text;
+  final j = Jalali.fromDateTime(dt);
+  final date = '${j.day} ${_jalaliMonths[j.month - 1]} ${j.year}';
+  if (!withTime || (dt.hour == 0 && dt.minute == 0 && !text.contains(':'))) return date;
+  final time = '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+  return '$date - $time';
+}
+
 class PromaxColors {
-  static const Color headerGradientStart = Color(0xFF0F172A);
+  static const Color headerGradientStart = Color(0xFF0B1220);
   static const Color headerGradientEnd = Color(0xFF1E3A8A);
-  static const Color background = Color(0xFF0F172A);
-  static const Color cardBackground = Colors.white;
-  static const Color fieldBorder = Color(0xFFCBD5E1);
+  static const Color background = Color(0xFF0B1220);
+  // پس‌زمینه‌ی روشن بدنه‌ی صفحات؛ کارت‌های سفید روی آن برجسته دیده می‌شوند
+  static const Color cardBackground = Color(0xFFF4F6FB);
+  static const Color surface = Colors.white;
+  static const Color fieldBorder = Color(0xFFE2E8F0);
   static const Color blueAction = Color(0xFF2563EB);
   static const Color greenAction = Color(0xFF16A34A);
   static const Color alertBg = Color(0xFFFEE2E2);
   static const Color alertText = Color(0xFFDC2626);
+  static const Color textMain = Color(0xFF0F172A);
   static const Color textMuted = Color(0xFF64748B);
 }
 
@@ -117,12 +139,199 @@ class PromaxApp extends StatelessWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      theme: ThemeData(
-        fontFamily: 'sans-serif',
-        scaffoldBackgroundColor: PromaxColors.background,
-        colorScheme: ColorScheme.fromSeed(seedColor: PromaxColors.blueAction),
-      ),
+      theme: _buildTheme(),
       home: const LoginScreen(),
+    );
+  }
+}
+
+ThemeData _buildTheme() {
+  final scheme = ColorScheme.fromSeed(
+    seedColor: PromaxColors.blueAction,
+    primary: PromaxColors.blueAction,
+    surface: PromaxColors.surface,
+  );
+  final radius = BorderRadius.circular(14);
+  OutlineInputBorder border(Color c, [double w = 1]) =>
+      OutlineInputBorder(borderRadius: radius, borderSide: BorderSide(color: c, width: w));
+
+  return ThemeData(
+    useMaterial3: true,
+    fontFamily: 'Vazirmatn',
+    colorScheme: scheme,
+    scaffoldBackgroundColor: PromaxColors.background,
+    textTheme: ThemeData.light().textTheme.apply(
+          fontFamily: 'Vazirmatn',
+          bodyColor: PromaxColors.textMain,
+          displayColor: PromaxColors.textMain,
+        ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: Colors.white,
+      isDense: true,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+      hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
+      labelStyle: const TextStyle(color: PromaxColors.textMuted, fontSize: 13),
+      prefixIconColor: const Color(0xFF94A3B8),
+      suffixIconColor: const Color(0xFF94A3B8),
+      border: border(PromaxColors.fieldBorder),
+      enabledBorder: border(PromaxColors.fieldBorder),
+      focusedBorder: border(PromaxColors.blueAction, 1.6),
+      errorBorder: border(PromaxColors.alertText),
+      focusedErrorBorder: border(PromaxColors.alertText, 1.6),
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        minimumSize: const Size(64, 48),
+        shape: RoundedRectangleBorder(borderRadius: radius),
+        textStyle: const TextStyle(fontFamily: 'Vazirmatn', fontWeight: FontWeight.bold, fontSize: 14),
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size(64, 46),
+        shape: RoundedRectangleBorder(borderRadius: radius),
+        side: const BorderSide(color: PromaxColors.fieldBorder),
+        textStyle: const TextStyle(fontFamily: 'Vazirmatn', fontWeight: FontWeight.w600),
+      ),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(
+        shape: RoundedRectangleBorder(borderRadius: radius),
+        textStyle: const TextStyle(fontFamily: 'Vazirmatn', fontWeight: FontWeight.w600),
+      ),
+    ),
+    dialogTheme: DialogThemeData(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+      backgroundColor: Colors.white,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      titleTextStyle: const TextStyle(fontFamily: 'Vazirmatn', fontSize: 16, fontWeight: FontWeight.bold, color: PromaxColors.textMain),
+    ),
+    bottomSheetTheme: const BottomSheetThemeData(
+      backgroundColor: Colors.white,
+      surfaceTintColor: Colors.transparent,
+      showDragHandle: false,
+    ),
+    cardTheme: CardThemeData(
+      color: Colors.white,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: PromaxColors.fieldBorder),
+      ),
+    ),
+    snackBarTheme: SnackBarThemeData(
+      behavior: SnackBarBehavior.floating,
+      backgroundColor: PromaxColors.textMain,
+      contentTextStyle: const TextStyle(fontFamily: 'Vazirmatn', color: Colors.white, fontSize: 13),
+      shape: RoundedRectangleBorder(borderRadius: radius),
+    ),
+    dividerTheme: const DividerThemeData(color: Color(0xFFEEF2F7), thickness: 1),
+    checkboxTheme: CheckboxThemeData(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6))),
+    drawerTheme: const DrawerThemeData(surfaceTintColor: Colors.transparent),
+    popupMenuTheme: PopupMenuThemeData(
+      color: Colors.white,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(borderRadius: radius),
+    ),
+    progressIndicatorTheme: const ProgressIndicatorThemeData(color: PromaxColors.blueAction),
+  );
+}
+
+/// انتخاب‌گر بازه‌ی زمانی مشترک بین داشبورد موبایل و اکسسوری
+class PeriodSelector extends StatefulWidget {
+  final List<String> periods;
+  final String selected;
+  final Color color;
+  final ValueChanged<String> onSelected;
+
+  const PeriodSelector({
+    super.key,
+    required this.periods,
+    required this.selected,
+    required this.onSelected,
+    this.color = PromaxColors.blueAction,
+  });
+
+  @override
+  State<PeriodSelector> createState() => _PeriodSelectorState();
+}
+
+class _PeriodSelectorState extends State<PeriodSelector> {
+  final Map<String, GlobalKey> _keys = {};
+
+  GlobalKey _keyFor(String p) => _keys.putIfAbsent(p, () => GlobalKey());
+
+  void _revealSelected({bool animate = false}) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctx = _keyFor(widget.selected).currentContext;
+      if (ctx == null) return;
+      Scrollable.ensureVisible(
+        ctx,
+        alignment: 0.5,
+        duration: animate ? const Duration(milliseconds: 250) : Duration.zero,
+        curve: Curves.easeOut,
+      );
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _revealSelected();
+  }
+
+  @override
+  void didUpdateWidget(covariant PeriodSelector oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.selected != widget.selected) _revealSelected(animate: true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          for (final p in widget.periods)
+            Padding(
+              key: _keyFor(p),
+              padding: const EdgeInsetsDirectional.only(end: 8),
+              child: _chip(p),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _chip(String p) {
+    final isSel = p == widget.selected;
+    final color = widget.color;
+    return GestureDetector(
+      onTap: () => widget.onSelected(p),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        height: 38,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: isSel ? color : Colors.white,
+          borderRadius: BorderRadius.circular(19),
+          border: Border.all(color: isSel ? color : PromaxColors.fieldBorder),
+          boxShadow: isSel ? [BoxShadow(color: color.withOpacity(0.25), blurRadius: 10, offset: const Offset(0, 3))] : null,
+        ),
+        child: Text(
+          p,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: isSel ? FontWeight.bold : FontWeight.w500,
+            color: isSel ? Colors.white : PromaxColors.textMuted,
+          ),
+        ),
+      ),
     );
   }
 }
@@ -298,116 +507,240 @@ class PromaxPageLayout extends StatelessWidget {
     required this.body,
   });
 
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Column(
+  Widget _headerButton({required IconData icon, required VoidCallback onTap, int badge = 0}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Stack(
+        clipBehavior: Clip.none,
         children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)]),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(Icons.bolt_rounded, color: Colors.white, size: 22),
-                    ),
-                    const SizedBox(width: 10),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text("PROMAX", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 17, letterSpacing: 1.5)),
-                        Text("v$appVersion | by $developerName", style: const TextStyle(color: Color(0xFF93C5FD), fontSize: 9.5, fontWeight: FontWeight.bold)),
-                      ],
-                    ),
-                  ],
-                ),
-                Row(
-                  children: [
-                    if (onSecurityTap != null) ...[
-                      GestureDetector(
-                        onTap: onSecurityTap,
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(color: Colors.white.withOpacity(0.12), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white24)),
-                          child: const Icon(Icons.security_rounded, color: Colors.white, size: 22),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                    ],
-                    GestureDetector(
-                      onTap: onNotificationTap,
-                      child: Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(color: Colors.white.withOpacity(0.12), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white24)),
-                            child: const Icon(Icons.notifications_none_rounded, color: Colors.white, size: 24),
-                          ),
-                          if (notificationCount > 0)
-                            Positioned(
-                              top: -4, right: -4,
-                              child: Container(
-                                padding: const EdgeInsets.all(4),
-                                decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                                child: Text("$notificationCount", style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    GestureDetector(
-                      onTap: openDrawer,
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(color: Colors.white.withOpacity(0.12), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white24)),
-                        child: const Icon(Icons.menu_rounded, color: Colors.white, size: 24),
-                      ),
-                    ),
-                  ],
-                )
-              ],
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Colors.white.withOpacity(0.10)),
             ),
+            child: Icon(icon, color: Colors.white, size: 22),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-            child: Column(
-              children: [
-                RichText(
-                  text: TextSpan(
-                    text: "$title ",
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-                    children: [TextSpan(text: "($adminName)", style: const TextStyle(color: Color(0xFF60A5FA)))],
-                  ),
+          if (badge > 0)
+            Positioned(
+              top: -3,
+              right: -3,
+              child: Container(
+                constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEF4444),
+                  borderRadius: BorderRadius.circular(9),
+                  border: Border.all(color: PromaxColors.background, width: 2),
                 ),
-                const SizedBox(height: 4),
-                Text(subtitle, style: const TextStyle(fontSize: 11, color: Colors.white70)),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          Expanded(
-            child: Container(
-              width: double.infinity,
-              decoration: const BoxDecoration(
-                color: PromaxColors.cardBackground,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+                child: Text("$badge", style: const TextStyle(color: Colors.white, fontSize: 9.5, fontWeight: FontWeight.bold, height: 1.2)),
               ),
-              child: ClipRRect(borderRadius: const BorderRadius.vertical(top: Radius.circular(32)), child: body),
             ),
-          ),
         ],
       ),
     );
   }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [PromaxColors.headerGradientStart, Color(0xFF13213F)],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+              child: Row(
+                children: [
+                  Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)], begin: Alignment.topRight, end: Alignment.bottomLeft),
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [BoxShadow(color: const Color(0xFF2563EB).withOpacity(0.35), blurRadius: 12, offset: const Offset(0, 4))],
+                    ),
+                    child: const Icon(Icons.phone_iphone_rounded, color: Colors.white, size: 22),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text("پرومکس", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16, height: 1.3)),
+                        Text(
+                          "سلام، $adminName",
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11.5, height: 1.3),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (onSecurityTap != null) ...[
+                    _headerButton(icon: Icons.admin_panel_settings_outlined, onTap: onSecurityTap!),
+                    const SizedBox(width: 8),
+                  ],
+                  _headerButton(icon: Icons.notifications_none_rounded, onTap: onNotificationTap, badge: notificationCount),
+                  const SizedBox(width: 8),
+                  _headerButton(icon: Icons.menu_rounded, onTap: openDrawer),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800, color: Colors.white, height: 1.3)),
+                  const SizedBox(height: 2),
+                  Text(subtitle, style: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8))),
+                ],
+              ),
+            ),
+            Expanded(
+              child: Container(
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  color: PromaxColors.cardBackground,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+                ),
+                child: ClipRRect(borderRadius: const BorderRadius.vertical(top: Radius.circular(28)), child: body),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// کارت یک بخش از فرم با عنوان و آیکون
+Widget _formSection({required String title, required IconData icon, Color color = PromaxColors.blueAction, required List<Widget> children}) {
+  return Container(
+    margin: const EdgeInsets.only(bottom: 14),
+    padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(20),
+      border: Border.all(color: PromaxColors.fieldBorder),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 30,
+              height: 30,
+              decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(9)),
+              child: Icon(icon, size: 17, color: color),
+            ),
+            const SizedBox(width: 10),
+            Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        const SizedBox(height: 14),
+        for (var i = 0; i < children.length; i++) ...[
+          if (i > 0) const SizedBox(height: 12),
+          children[i],
+        ],
+      ],
+    ),
+  );
+}
+
+/// فیلد متنی همراه با دکمه‌ی اسکن بارکد
+Widget _scanField({required BuildContext context, required TextEditingController controller, required String hint, required ValueChanged<String> onScanned, Color color = PromaxColors.blueAction}) {
+  return Row(
+    children: [
+      Expanded(child: _buildInput(controller: controller, hint: hint, prefixIcon: Icons.view_week_outlined)),
+      const SizedBox(width: 8),
+      Material(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: () => openSafeScanner(context, onScanned),
+          child: SizedBox(width: 50, height: 50, child: Icon(Icons.qr_code_scanner_rounded, color: color, size: 24)),
+        ),
+      ),
+    ],
+  );
+}
+
+/// انتخاب از لیست با ظاهر یکسان با فیلدهای متنی
+Widget _dropdownField({required String label, required String value, required List<String> items, required ValueChanged<String> onChanged, IconData? icon}) {
+  return DropdownButtonFormField<String>(
+    value: value,
+    isExpanded: true,
+    borderRadius: BorderRadius.circular(14),
+    dropdownColor: Colors.white,
+    icon: const Icon(Icons.keyboard_arrow_down_rounded),
+    decoration: InputDecoration(labelText: label, prefixIcon: icon == null ? null : Icon(icon, size: 20)),
+    style: const TextStyle(fontFamily: 'Vazirmatn', fontSize: 14, color: PromaxColors.textMain),
+    items: items.map((v) => DropdownMenuItem(value: v, child: Text(v, overflow: TextOverflow.ellipsis))).toList(),
+    onChanged: (v) {
+      if (v != null) onChanged(v);
+    },
+  );
+}
+
+/// تأیید استعلام همتا
+Widget _hamtaTile({required bool value, required ValueChanged<bool> onChanged, Color color = PromaxColors.blueAction}) {
+  return Material(
+    color: value ? color.withOpacity(0.06) : PromaxColors.cardBackground,
+    borderRadius: BorderRadius.circular(14),
+    child: InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: () => onChanged(!value),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        child: Row(
+          children: [
+            Icon(value ? Icons.verified_rounded : Icons.verified_outlined, color: value ? color : PromaxColors.textMuted, size: 22),
+            const SizedBox(width: 10),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text("استعلام همتا انجام شد", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                  Text("اصالت و رجیستری دستگاه در سامانه همتا بررسی شد", style: TextStyle(fontSize: 11, color: PromaxColors.textMuted)),
+                ],
+              ),
+            ),
+            Switch(value: value, activeColor: color, onChanged: onChanged),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+/// دکمه‌ی اصلی ثبت فرم
+Widget _submitButton({required String label, required IconData icon, required Color color, required VoidCallback? onPressed, bool loading = false}) {
+  return FilledButton(
+    onPressed: loading ? null : onPressed,
+    style: FilledButton.styleFrom(
+      backgroundColor: color,
+      minimumSize: const Size.fromHeight(54),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    ),
+    child: loading
+        ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
+        : Row(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(icon), const SizedBox(width: 8), Text(label, style: const TextStyle(fontSize: 15))]),
+  );
 }
 
 Widget _buildInput({required TextEditingController controller, required String hint, required IconData prefixIcon, bool isNumber = false, bool isPhone = false, Function(String)? onChanged}) {
@@ -416,11 +749,10 @@ Widget _buildInput({required TextEditingController controller, required String h
     keyboardType: isNumber || isPhone ? TextInputType.number : TextInputType.text,
     inputFormatters: isNumber ? [FilteringTextInputFormatter.digitsOnly, CurrencyInputFormatter()] : null,
     onChanged: onChanged,
-    style: const TextStyle(fontSize: 13),
+    style: const TextStyle(fontSize: 14),
     decoration: InputDecoration(
-      hintText: hint, prefixIcon: Icon(prefixIcon, color: PromaxColors.textMuted, size: 20),
-      filled: true, fillColor: Colors.white, contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: PromaxColors.fieldBorder, width: 1.2)),
+      hintText: hint,
+      prefixIcon: Icon(prefixIcon, size: 20),
     ),
   );
 }
@@ -625,83 +957,114 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(28),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: PromaxColors.blueAction.withOpacity(0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.phone_android_rounded, size: 54, color: PromaxColors.blueAction),
-                ),
-                const SizedBox(height: 12),
-                const Text(
-                  "PROMAX MOBILE",
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, letterSpacing: 1.5),
-                ),
-                Text(
-                  "توسعه‌دهنده: $developerName | نسخه $appVersion",
-                  style: const TextStyle(fontSize: 11, color: PromaxColors.textMuted),
-                ),
-                const SizedBox(height: 24),
-                TextField(
-                  controller: userCtl,
-                  decoration: InputDecoration(
-                    labelText: "نام کاربری",
-                    prefixIcon: const Icon(Icons.person_outline),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: passCtl,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: "رمز عبور",
-                    prefixIcon: const Icon(Icons.lock_outline),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                FilledButton(
-                  onPressed: loading ? null : login,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: PromaxColors.blueAction,
-                    minimumSize: const Size.fromHeight(50),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  ),
-                  child: loading
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text("ورود به سامانه", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-                ),
-                if (canCheckBiometrics && hasSavedSession) ...[
-                  const SizedBox(height: 12),
-                  OutlinedButton.icon(
-                    onPressed: () => _biometricLogin(),
-                    icon: const Icon(Icons.fingerprint, color: PromaxColors.blueAction, size: 26),
-                    label: const Text(
-                      "ورود با اثر انگشت / Face ID",
-                      style: TextStyle(color: PromaxColors.blueAction, fontWeight: FontWeight.bold),
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [PromaxColors.headerGradientStart, Color(0xFF13213F), PromaxColors.headerGradientEnd],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 76,
+                      height: 76,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)], begin: Alignment.topRight, end: Alignment.bottomLeft),
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [BoxShadow(color: const Color(0xFF2563EB).withOpacity(0.45), blurRadius: 24, offset: const Offset(0, 8))],
+                      ),
+                      child: const Icon(Icons.phone_iphone_rounded, size: 38, color: Colors.white),
                     ),
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size.fromHeight(48),
-                      side: const BorderSide(color: PromaxColors.blueAction),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    const SizedBox(height: 18),
+                    const Text(
+                      "حسابدار پرومکس",
+                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: Colors.white),
                     ),
-                  ),
-                ]
-              ],
+                    const SizedBox(height: 4),
+                    const Text(
+                      "مدیریت خرید، فروش و انبار موبایل‌فروشی",
+                      style: TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
+                    ),
+                    const SizedBox(height: 28),
+                    Container(
+                      padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(28),
+                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.25), blurRadius: 30, offset: const Offset(0, 12))],
+                      ),
+                      child: AutofillGroup(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            const Text("ورود به حساب", style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 4),
+                            const Text("نام کاربری و رمز عبور خود را وارد کنید", style: TextStyle(fontSize: 12, color: PromaxColors.textMuted)),
+                            const SizedBox(height: 20),
+                            TextField(
+                              controller: userCtl,
+                              textInputAction: TextInputAction.next,
+                              autofillHints: const [AutofillHints.username],
+                              decoration: const InputDecoration(
+                                labelText: "نام کاربری",
+                                prefixIcon: Icon(Icons.person_outline_rounded),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            TextField(
+                              controller: passCtl,
+                              obscureText: true,
+                              textInputAction: TextInputAction.done,
+                              autofillHints: const [AutofillHints.password],
+                              onSubmitted: (_) => loading ? null : login(),
+                              decoration: const InputDecoration(
+                                labelText: "رمز عبور",
+                                prefixIcon: Icon(Icons.lock_outline_rounded),
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                            FilledButton(
+                              onPressed: loading ? null : login,
+                              style: FilledButton.styleFrom(
+                                backgroundColor: PromaxColors.blueAction,
+                                minimumSize: const Size.fromHeight(52),
+                              ),
+                              child: loading
+                                  ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
+                                  : const Text("ورود به سامانه", style: TextStyle(fontSize: 15)),
+                            ),
+                            if (canCheckBiometrics && hasSavedSession) ...[
+                              const SizedBox(height: 10),
+                              OutlinedButton.icon(
+                                onPressed: () => _biometricLogin(),
+                                icon: const Icon(Icons.fingerprint_rounded, color: PromaxColors.blueAction, size: 24),
+                                label: const Text("ورود با اثر انگشت", style: TextStyle(color: PromaxColors.blueAction)),
+                                style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(50)),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      "نسخه $appVersion  •  توسعه‌دهنده: $developerName",
+                      style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         ),
@@ -912,7 +1275,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                             child: ListTile(
                               leading: const Icon(Icons.history_toggle_off, color: PromaxColors.blueAction),
                               title: Text("${l['action_type']} توسط ${l['admin_name']}", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                              subtitle: Text("${l['description']}\nزمان: ${l['created_at']}", style: const TextStyle(fontSize: 10, color: PromaxColors.textMuted)),
+                              subtitle: Text("${l['description']}\n${formatShamsi(l['created_at'])}", style: const TextStyle(fontSize: 10, color: PromaxColors.textMuted)),
                             ),
                           );
                         },
@@ -944,7 +1307,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextField(controller: nameCtl, decoration: const InputDecoration(labelText: "نام کامل همکار")),
+                const SizedBox(height: 12),
                 TextField(controller: userCtl, decoration: const InputDecoration(labelText: "نام کاربری")),
+                const SizedBox(height: 12),
                 TextField(controller: passCtl, decoration: const InputDecoration(labelText: "کلمه عبور")),
                 const Divider(),
                 const Text("بخش‌های مجاز برای این همکار:", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
@@ -1068,7 +1433,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(controller: nameCtl, decoration: const InputDecoration(labelText: "نام کامل")),
+            const SizedBox(height: 12),
             TextField(controller: userCtl, decoration: const InputDecoration(labelText: "نام کاربری")),
+            const SizedBox(height: 12),
             TextField(controller: passCtl, obscureText: true, decoration: const InputDecoration(labelText: "رمز عبور جدید (اختیاری)")),
           ],
         ),
@@ -1122,64 +1489,105 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     return Scaffold(
       key: _scaffoldKey,
       drawer: Drawer(
-        backgroundColor: const Color(0xFFF8FAFC),
+        backgroundColor: PromaxColors.cardBackground,
+        shape: const RoundedRectangleBorder(
+          // منو در چینش راست‌به‌چپ از سمت راست باز می‌شود؛ لبه‌ی داخلی آن سمت چپ است
+          borderRadius: BorderRadius.horizontal(left: Radius.circular(28)),
+        ),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Container(
-              padding: const EdgeInsets.fromLTRB(20, 50, 20, 24),
+              padding: EdgeInsets.fromLTRB(20, MediaQuery.of(context).padding.top + 28, 20, 24),
               decoration: const BoxDecoration(
                 gradient: LinearGradient(colors: [PromaxColors.headerGradientStart, PromaxColors.headerGradientEnd], begin: Alignment.topRight, end: Alignment.bottomLeft),
-                borderRadius: BorderRadius.only(bottomLeft: Radius.circular(24), bottomRight: Radius.circular(24)),
               ),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), shape: BoxShape.circle), child: const Icon(Icons.person, color: Colors.white, size: 30)),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(widget.adminData['full_name'] ?? 'مدیر پرومکس', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                        const SizedBox(height: 4),
-                        Text(isSuperAdmin ? "مدیر کل (Super Admin)" : "ادمین فروشگاهی", style: const TextStyle(color: Colors.white70, fontSize: 11)),
-                      ],
+                  Container(
+                    width: 56,
+                    height: 56,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)]),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: Colors.white.withOpacity(0.2), width: 2),
                     ),
-                  )
+                    child: Text(
+                      _initial(widget.adminData['full_name']),
+                      style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w800),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    widget.adminData['full_name'] ?? 'مدیر پرومکس',
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 17),
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          isSuperAdmin ? "مدیر کل" : "همکار فروشگاه",
+                          style: const TextStyle(color: Color(0xFFBFDBFE), fontSize: 11, fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        "@${widget.adminData['username'] ?? ''}",
+                        textDirection: TextDirection.ltr,
+                        style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
-            const SizedBox(height: 12),
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
+                padding: const EdgeInsets.fromLTRB(14, 18, 14, 8),
                 children: [
-                  ListTile(
-                    leading: const Icon(Icons.badge_outlined, color: PromaxColors.blueAction),
-                    title: const Text("تغییر نام و پسورد من"),
+                  _drawerSection("حساب کاربری"),
+                  _drawerTile(
+                    icon: Icons.manage_accounts_outlined,
+                    color: PromaxColors.blueAction,
+                    title: "ویرایش پروفایل",
+                    subtitle: "تغییر نام، نام کاربری و رمز عبور",
                     onTap: () {
                       Navigator.pop(context);
                       _showEditProfileDialog();
                     },
                   ),
-                  if (isSuperAdmin)
-                    ListTile(
-                      leading: const Icon(Icons.admin_panel_settings, color: PromaxColors.greenAction),
-                      title: const Text("مدیریت دسترسی همکاران و تاریخچه"),
+                  if (isSuperAdmin) ...[
+                    const SizedBox(height: 14),
+                    _drawerSection("مدیریت"),
+                    _drawerTile(
+                      icon: Icons.admin_panel_settings_outlined,
+                      color: PromaxColors.greenAction,
+                      title: "همکاران و دسترسی‌ها",
+                      subtitle: "افزودن همکار، تعیین دسترسی و تاریخچه‌ی فعالیت",
                       onTap: () {
                         Navigator.pop(context);
                         _showAdminManagementPanel();
                       },
                     ),
+                  ],
                 ],
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(16),
-              child: ListTile(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                tileColor: Colors.red.shade50,
-                leading: const Icon(Icons.logout_rounded, color: PromaxColors.alertText),
-                title: const Text("خروج از حساب کاربری", style: TextStyle(color: PromaxColors.alertText, fontWeight: FontWeight.bold)),
+              padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
+              child: _drawerTile(
+                icon: Icons.logout_rounded,
+                color: PromaxColors.alertText,
+                title: "خروج از حساب",
+                danger: true,
                 onTap: () async {
                   await Api.logout(serverUrl);
                   if (!context.mounted) return;
@@ -1190,22 +1598,98 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                 },
               ),
             ),
+            SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Text(
+                  "حسابدار پرومکس  •  نسخه $appVersion",
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+                ),
+              ),
+            ),
           ],
         ),
       ),
       body: accessiblePages[_currentIndex],
       bottomNavigationBar: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-        decoration: BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -4))]),
+        padding: const EdgeInsets.fromLTRB(8, 8, 8, 6),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          border: Border(top: BorderSide(color: PromaxColors.fieldBorder)),
+        ),
         child: SafeArea(
+          top: false,
+          // در چینش راست‌به‌چپ اولین آیتم (آمار) در سمت راست قرار می‌گیرد
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _navItem(icon: Icons.headphones_outlined, label: "جانبی", index: 4),
-              _navItem(icon: Icons.inventory_2_outlined, label: "انبار", index: 3),
-              _navItem(icon: Icons.point_of_sale_rounded, label: "فروش", index: 2),
-              _navItem(icon: Icons.shopping_cart_outlined, label: "خرید", index: 1),
               _navItem(icon: Icons.insights_rounded, label: "آمار مالی", index: 0),
+              _navItem(icon: Icons.add_shopping_cart_rounded, label: "خرید", index: 1),
+              _navItem(icon: Icons.point_of_sale_rounded, label: "فروش", index: 2),
+              _navItem(icon: Icons.inventory_2_outlined, label: "انبار", index: 3),
+              _navItem(icon: Icons.headphones_outlined, label: "جانبی", index: 4),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _initial(dynamic name) {
+    final n = (name ?? '').toString().trim();
+    return n.isEmpty ? 'پ' : n.characters.first;
+  }
+
+  Widget _drawerSection(String title) {
+    return Padding(
+      padding: const EdgeInsetsDirectional.only(start: 6, bottom: 8),
+      child: Text(title, style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFF94A3B8))),
+    );
+  }
+
+  Widget _drawerTile({
+    required IconData icon,
+    required Color color,
+    required String title,
+    String? subtitle,
+    bool danger = false,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: danger ? const Color(0xFFFEF2F2) : Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: danger ? const Color(0xFFFECACA) : PromaxColors.fieldBorder),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(color: color.withOpacity(0.10), borderRadius: BorderRadius.circular(12)),
+                child: Icon(icon, color: color, size: 21),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: danger ? color : PromaxColors.textMain)),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: 2),
+                      Text(subtitle, style: const TextStyle(fontSize: 11, color: PromaxColors.textMuted)),
+                    ],
+                  ],
+                ),
+              ),
+              if (!danger) const Icon(Icons.chevron_left_rounded, color: Color(0xFFCBD5E1)),
             ],
           ),
         ),
@@ -1215,22 +1699,29 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   Widget _navItem({required IconData icon, required String label, required int index}) {
     final isSelected = _currentIndex == index;
-    return GestureDetector(
-      onTap: () => setState(() => _currentIndex = index),
-      behavior: HitTestBehavior.opaque,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-            decoration: BoxDecoration(color: isSelected ? const Color(0xFFE0E7FF) : Colors.transparent, borderRadius: BorderRadius.circular(16)),
-            child: Icon(icon, color: isSelected ? PromaxColors.blueAction : PromaxColors.textMuted, size: 22),
-          ),
-          const SizedBox(height: 2),
-          Text(label, style: TextStyle(fontSize: 10, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal, color: isSelected ? PromaxColors.blueAction : PromaxColors.textMuted)),
-        ],
+    final color = isSelected ? PromaxColors.blueAction : const Color(0xFF94A3B8);
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _currentIndex = index),
+        behavior: HitTestBehavior.opaque,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeOut,
+              width: 56,
+              padding: const EdgeInsets.symmetric(vertical: 5),
+              decoration: BoxDecoration(
+                color: isSelected ? const Color(0xFFE8EFFE) : Colors.transparent,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Icon(icon, color: color, size: 23),
+            ),
+            const SizedBox(height: 3),
+            Text(label, style: TextStyle(fontSize: 11, fontWeight: isSelected ? FontWeight.bold : FontWeight.w500, color: isSelected ? PromaxColors.blueAction : PromaxColors.textMuted)),
+          ],
+        ),
       ),
     );
   }
@@ -1268,7 +1759,6 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
   };
 
   String selectedPeriodTitle = 'این ماه';
-  String chartScale = 'روزانه';
   bool loading = true;
   bool hasError = false;
   Map<String, dynamic>? data;
@@ -1329,7 +1819,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
               controller: payCtl,
               keyboardType: TextInputType.number,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly, CurrencyInputFormatter()],
-              decoration: const InputDecoration(labelText: "مبلغ دریافتی (تومان)", border: OutlineInputBorder()),
+              decoration: const InputDecoration(labelText: "مبلغ دریافتی (تومان)"),
             ),
           ],
         ),
@@ -1379,7 +1869,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
               controller: balCtl,
               keyboardType: TextInputType.number,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly, CurrencyInputFormatter()],
-              decoration: const InputDecoration(labelText: "موجودی کارت (تومان)", border: OutlineInputBorder()),
+              decoration: const InputDecoration(labelText: "موجودی کارت (تومان)"),
             ),
           ],
         ),
@@ -1421,21 +1911,21 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
               children: [
                 DropdownButtonFormField<String>(
                   value: cat,
-                  decoration: const InputDecoration(labelText: "دسته‌‌بندی هزینه", border: OutlineInputBorder()),
+                  decoration: const InputDecoration(labelText: "دسته‌‌بندی هزینه"),
                   items: ['اجاره مغازه', 'قبوض آب/برق/گاز', 'برداشت سود شخصی', 'پیک و اسنپ', 'حقوق و شاگرد', 'متفرقه'].map((c) => DropdownMenuItem(value: c, child: Text(c, style: const TextStyle(fontSize: 12)))).toList(),
                   onChanged: (v) => setDialogState(() => cat = v!),
                 ),
                 const SizedBox(height: 10),
-                TextField(controller: titleCtl, decoration: const InputDecoration(labelText: "عنوان هزینه", border: OutlineInputBorder())),
+                TextField(controller: titleCtl, decoration: const InputDecoration(labelText: "عنوان هزینه")),
                 const SizedBox(height: 10),
                 TextField(
                   controller: amountCtl,
                   keyboardType: TextInputType.number,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly, CurrencyInputFormatter()],
-                  decoration: const InputDecoration(labelText: "مبلغ برداشت (تومان)", border: OutlineInputBorder()),
+                  decoration: const InputDecoration(labelText: "مبلغ برداشت (تومان)"),
                 ),
                 const SizedBox(height: 10),
-                TextField(controller: descCtl, decoration: const InputDecoration(labelText: "توضیحات (اختیاری)", border: OutlineInputBorder())),
+                TextField(controller: descCtl, decoration: const InputDecoration(labelText: "توضیحات (اختیاری)")),
               ],
             ),
           ),
@@ -1495,7 +1985,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
             _detailText("دسته‌بندی:", "${item['category'] ?? 'هزینه جاری'}"),
             _detailText("مبلغ برداشت شده:", "${formatToman(item['amount'])} تومان", isBold: true, color: Colors.red),
             _detailText("ادمین ثبت‌کننده:", "${item['recorded_by'] ?? 'مدیر'}"),
-            _detailText("تاریخ و ساعت ثبت:", "${item['expense_date'] ?? '-'}"),
+            _detailText("تاریخ و ساعت ثبت:", formatShamsi(item['expense_date'])),
             const Divider(height: 18),
             const Text("توضیحات و یادداشت:", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: PromaxColors.textMuted)),
             const SizedBox(height: 4),
@@ -1537,7 +2027,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
     final int totalExpenses = data?['total_expenses'] ?? 0;
 
     return PromaxPageLayout(
-      title: "گزارش‌ها و آمارها (موبایل)",
+      title: "گزارش مالی موبایل",
       adminName: widget.adminData['full_name'],
       subtitle: "نقدینگی و عملکرد مالی اختصاصی موبایل",
       openDrawer: widget.openDrawer,
@@ -1564,26 +2054,13 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
                   child: ListView(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                     children: [
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          children: periodKeys.keys.map((p) {
-                            final isSel = selectedPeriodTitle == p;
-                            return Padding(
-                              padding: const EdgeInsets.only(left: 6),
-                              child: ChoiceChip(
-                                label: Text(p, style: TextStyle(fontSize: 11, fontWeight: isSel ? FontWeight.bold : FontWeight.normal, color: isSel ? Colors.white : Colors.black87)),
-                                selected: isSel,
-                                selectedColor: PromaxColors.blueAction,
-                                backgroundColor: Colors.white,
-                                onSelected: (_) {
-                                  setState(() => selectedPeriodTitle = p);
-                                  loadAnalytics();
-                                },
-                              ),
-                            );
-                          }).toList(),
-                        ),
+                      PeriodSelector(
+                        periods: periodKeys.keys.toList(),
+                        selected: selectedPeriodTitle,
+                        onSelected: (p) {
+                          setState(() => selectedPeriodTitle = p);
+                          loadAnalytics();
+                        },
                       ),
                       const SizedBox(height: 14),
 
@@ -1705,7 +2182,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
                                               children: [
                                                 Text(ex['title'] ?? 'هزینه', overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                                                 const SizedBox(height: 3),
-                                                Text("ثبت: ${ex['recorded_by']} | ${ex['expense_date']}", style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                                                Text("${ex['recorded_by']}  •  ${formatShamsi(ex['expense_date'])}", style: const TextStyle(fontSize: 10, color: Colors.grey)),
                                               ],
                                             ),
                                           ),
@@ -1827,7 +2304,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
                                         Row(
                                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                           children: [
-                                            Expanded(child: Text("ثبت: ${o['sale_time'] ?? ''} - ${o['sale_date'] ?? ''}", overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 10, color: Colors.blueGrey))),
+                                            Expanded(child: Text(formatShamsi(o['sale_date']), overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 10, color: Colors.blueGrey))),
                                             const SizedBox(width: 8),
                                             Text(o['remaining_amount'] > 0 ? "مانده: ${formatToman(o['remaining_amount'])} ت" : "تسویه کامل", style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: o['remaining_amount'] > 0 ? Colors.red : Colors.green)),
                                           ],
@@ -1840,15 +2317,11 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
                       ),
                       const SizedBox(height: 16),
 
-                      _buildSalesAndProfitLineChart(),
+                      _buildSalesTrendChart(salesOrders),
                       const SizedBox(height: 16),
-                      _buildBrandDonutChart(),
+                      _buildBrandShareChart(salesOrders),
                       const SizedBox(height: 16),
-                      _buildWeeklyBarChart(),
-                      const SizedBox(height: 16),
-                      _buildLowStockTable(),
-                      const SizedBox(height: 16),
-                      _buildRecentActivitiesAndAiSummary(),
+                      _buildPeriodSummary(salesOrders),
                       const SizedBox(height: 20),
                     ],
                   ),
@@ -1871,7 +2344,100 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
     );
   }
 
-  Widget _buildSalesAndProfitLineChart() {
+  // ------------------- نمودارها و خلاصه (بر اساس داده‌ی واقعی دوره) -------------------
+
+  static const List<Color> _brandColors = [
+    Color(0xFF2563EB),
+    Color(0xFF7C3AED),
+    Color(0xFFF97316),
+    Color(0xFF06B6D4),
+    Color(0xFFEC4899),
+    Color(0xFF94A3B8),
+  ];
+
+  /// آمار روزانه: از خروجی تجمیعی سرور (daily)، یا اگر سرور قدیمی است از لیست سفارش‌ها
+  List<_DayStat> _dailyStats(List<dynamic> salesOrders) => _fillMissingDays(_rawDailyStats(salesOrders));
+
+  /// روزهای بدون فروش با صفر پر می‌شوند تا فاصله‌ی زمانی میله‌ها درست باشد
+  List<_DayStat> _fillMissingDays(List<_DayStat> days) {
+    if (days.length < 2) return days;
+    final first = DateTime(days.first.date.year, days.first.date.month, days.first.date.day);
+    final last = DateTime(days.last.date.year, days.last.date.month, days.last.date.day);
+    final span = last.difference(first).inDays;
+    if (span > 62) return days;
+    final byKey = {for (final d in days) '${d.date.year}-${d.date.month}-${d.date.day}': d};
+    final hasProfit = days.any((d) => d.profit != null);
+    return [
+      for (var i = 0; i <= span; i++)
+        () {
+          final day = DateTime(first.year, first.month, first.day + i);
+          return byKey['${day.year}-${day.month}-${day.day}'] ??
+              _DayStat(date: day, sales: 0, profit: hasProfit ? 0 : null, count: 0);
+        }(),
+    ];
+  }
+
+  List<_DayStat> _rawDailyStats(List<dynamic> salesOrders) {
+    final raw = data?['daily'];
+    if (raw is List) {
+      return raw
+          .map((e) => _DayStat(
+                date: DateTime.tryParse('${e['date']}') ?? DateTime.now(),
+                sales: (e['sales'] as num?)?.toInt() ?? 0,
+                profit: (e['profit'] as num?)?.toInt(),
+                count: (e['count'] as num?)?.toInt() ?? 0,
+              ))
+          .toList();
+    }
+    final Map<String, _DayStat> byDay = {};
+    for (final o in salesOrders) {
+      final dt = DateTime.tryParse('${o['sale_date']}'.replaceFirst(' ', 'T'));
+      if (dt == null) continue;
+      final key = '${dt.year}-${dt.month}-${dt.day}';
+      final prev = byDay[key];
+      byDay[key] = _DayStat(
+        date: DateTime(dt.year, dt.month, dt.day),
+        sales: (prev?.sales ?? 0) + ((o['sale_price'] as num?)?.toInt() ?? 0),
+        profit: null,
+        count: (prev?.count ?? 0) + 1,
+      );
+    }
+    return byDay.values.toList()..sort((x, y) => x.date.compareTo(y.date));
+  }
+
+  /// سهم برندها: از خروجی تجمیعی سرور (brands)، یا از لیست سفارش‌ها
+  List<MapEntry<String, int>> _brandStats(List<dynamic> salesOrders) {
+    final Map<String, int> totals = {};
+    final raw = data?['brands'];
+    if (raw is List) {
+      for (final e in raw) {
+        totals[_shortBrand(e['brand'])] = (totals[_shortBrand(e['brand'])] ?? 0) + ((e['sales'] as num?)?.toInt() ?? 0);
+      }
+    } else {
+      for (final o in salesOrders) {
+        final b = _shortBrand(o['brand']);
+        totals[b] = (totals[b] ?? 0) + ((o['sale_price'] as num?)?.toInt() ?? 0);
+      }
+    }
+    final list = totals.entries.where((e) => e.value > 0).toList()..sort((x, y) => y.value.compareTo(x.value));
+    if (list.length <= 6) return list;
+    final others = list.skip(5).fold<int>(0, (sum, e) => sum + e.value);
+    return [...list.take(5), MapEntry('سایر', others)];
+  }
+
+  String _shortBrand(dynamic brand) {
+    final b = (brand ?? '').toString().trim();
+    if (b.isEmpty) return 'نامشخص';
+    return b.split(' (').first.trim();
+  }
+
+  String _compactToman(num value) {
+    if (value >= 1000000000) return '${(value / 1000000000).toStringAsFixed(1)} میلیارد';
+    if (value >= 1000000) return '${(value / 1000000).toStringAsFixed(1)} میلیون';
+    return formatToman(value.toInt());
+  }
+
+  Widget _sectionCard({required IconData icon, required String title, Widget? trailing, required Widget child}) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: PromaxColors.fieldBorder)),
@@ -1879,300 +2445,206 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Row(
-                children: [
-                  Icon(Icons.stacked_line_chart_rounded, color: PromaxColors.blueAction, size: 20),
-                  SizedBox(width: 8),
-                  Text("مقایسه فروش و سود", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                ],
-              ),
-              Row(
-                children: ['روزانه', 'هفتگی', 'ماهانه'].map((s) {
-                  final isSel = chartScale == s;
-                  return GestureDetector(
-                    onTap: () => setState(() => chartScale = s),
-                    child: Container(
-                      margin: const EdgeInsets.only(left: 4),
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(color: isSel ? PromaxColors.blueAction : Colors.transparent, borderRadius: BorderRadius.circular(8)),
-                      child: Text(s, style: TextStyle(fontSize: 10, color: isSel ? Colors.white : PromaxColors.textMuted, fontWeight: isSel ? FontWeight.bold : FontWeight.normal)),
-                    ),
-                  );
-                }).toList(),
-              )
+              Icon(icon, color: PromaxColors.blueAction, size: 20),
+              const SizedBox(width: 8),
+              Expanded(child: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5))),
+              if (trailing != null) trailing,
             ],
           ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              _legendItem("فروش", const Color(0xFF2563EB)),
-              const SizedBox(width: 14),
-              _legendItem("سود", const Color(0xFF10B981)),
-            ],
-          ),
-          const SizedBox(height: 16),
-          SizedBox(height: 150, width: double.infinity, child: CustomPaint(painter: SmoothLineChartPainter())),
-          const SizedBox(height: 8),
-          const Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text("۱ تا ۷", style: TextStyle(fontSize: 9.5, color: PromaxColors.textMuted)),
-              Text("۸ تا ۱۴", style: TextStyle(fontSize: 9.5, color: PromaxColors.textMuted)),
-              Text("۱۵ تا ۲۱", style: TextStyle(fontSize: 9.5, color: PromaxColors.textMuted)),
-              Text("۲۲ تا ۲۸", style: TextStyle(fontSize: 9.5, color: PromaxColors.textMuted)),
-              Text("۲۹ تا آخر", style: TextStyle(fontSize: 9.5, color: PromaxColors.textMuted)),
-            ],
-          )
+          const SizedBox(height: 14),
+          child,
         ],
       ),
     );
   }
 
-  Widget _buildBrandDonutChart() {
+  Widget _emptyChart(String text) {
     return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: PromaxColors.fieldBorder)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      height: 90,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(color: PromaxColors.cardBackground, borderRadius: BorderRadius.circular(14)),
+      child: Text(text, style: const TextStyle(fontSize: 12, color: PromaxColors.textMuted)),
+    );
+  }
+
+  Widget _buildSalesTrendChart(List<dynamic> salesOrders) {
+    final days = _dailyStats(salesOrders);
+    final hasProfit = days.any((d) => d.profit != null);
+    final maxVal = days.fold<int>(0, (m, d) => d.sales > m ? d.sales : m);
+
+    return _sectionCard(
+      icon: Icons.bar_chart_rounded,
+      title: "روند فروش روزانه",
+      trailing: Row(
         children: [
-          const Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.pie_chart_outline_rounded, color: PromaxColors.blueAction, size: 20),
-                  SizedBox(width: 8),
-                  Text("فروش بر اساس برند", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                ],
-              ),
-              Text("مشاهده همه ←", style: TextStyle(fontSize: 10.5, color: PromaxColors.blueAction, fontWeight: FontWeight.bold)),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                flex: 5,
-                child: SizedBox(
+          _legendItem("فروش", const Color(0xFF93C5FD)),
+          if (hasProfit) ...[
+            const SizedBox(width: 10),
+            _legendItem("سود", const Color(0xFF10B981)),
+          ],
+        ],
+      ),
+      child: days.isEmpty || maxVal == 0
+          ? _emptyChart("در این بازه فروشی ثبت نشده است")
+          : Column(
+              children: [
+                SizedBox(
                   height: 140,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      for (final d in days)
+                        Expanded(
+                          child: Tooltip(
+                            message: "${formatShamsi(d.date.toIso8601String(), withTime: false)}\nفروش: ${formatToman(d.sales)} ت"
+                                "${d.profit != null ? '\nسود: ${formatToman(d.profit)} ت' : ''}",
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(horizontal: days.length > 15 ? 1 : 3),
+                              child: Stack(
+                                alignment: Alignment.bottomCenter,
+                                children: [
+                                  Container(
+                                    height: 140 * d.sales / maxVal,
+                                    decoration: BoxDecoration(color: const Color(0xFF93C5FD), borderRadius: BorderRadius.circular(4)),
+                                  ),
+                                  if (d.profit != null && d.profit! > 0)
+                                    Container(
+                                      height: 140 * (d.profit! / maxVal).clamp(0.0, 1.0),
+                                      decoration: BoxDecoration(color: const Color(0xFF10B981), borderRadius: BorderRadius.circular(4)),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    for (var i = 0; i < days.length; i++)
+                      Expanded(
+                        child: Text(
+                          (days.length <= 10 || i % 5 == 0 || i == days.length - 1) ? '${Jalali.fromDateTime(days[i].date).day}' : '',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(fontSize: 9.5, color: PromaxColors.textMuted),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  "${formatShamsi(days.first.date.toIso8601String(), withTime: false)}  تا  ${formatShamsi(days.last.date.toIso8601String(), withTime: false)}",
+                  style: const TextStyle(fontSize: 10, color: PromaxColors.textMuted),
+                ),
+              ],
+            ),
+    );
+  }
+
+  Widget _buildBrandShareChart(List<dynamic> salesOrders) {
+    final brands = _brandStats(salesOrders);
+    final total = brands.fold<int>(0, (s, e) => s + e.value);
+
+    return _sectionCard(
+      icon: Icons.pie_chart_outline_rounded,
+      title: "سهم برندها از فروش",
+      child: brands.isEmpty
+          ? _emptyChart("در این بازه فروشی ثبت نشده است")
+          : Row(
+              children: [
+                SizedBox(
+                  width: 130,
+                  height: 130,
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
-                      CustomPaint(size: const Size(140, 140), painter: DonutChartPainter()),
-                      const Column(
+                      CustomPaint(
+                        size: const Size(130, 130),
+                        painter: DonutChartPainter(
+                          values: brands.map((e) => e.value.toDouble()).toList(),
+                          colors: _brandColors,
+                        ),
+                      ),
+                      Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text("کل فروش", style: TextStyle(fontSize: 9.5, color: PromaxColors.textMuted)),
-                          Text("۳.۲۵B", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                          const Text("کل فروش", style: TextStyle(fontSize: 10, color: PromaxColors.textMuted)),
+                          Text(_compactToman(total), style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold)),
                         ],
                       ),
                     ],
                   ),
                 ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                flex: 6,
-                child: Column(
-                  children: [
-                    _brandShareRow("اپل", "۴۲٪", const Color(0xFF2563EB)),
-                    _brandShareRow("سامسونگ", "۲۸٪", const Color(0xFF6366F1)),
-                    _brandShareRow("شیائومی", "۱۲٪", const Color(0xFFF97316)),
-                    _brandShareRow("آنر", "۶٪", const Color(0xFF06B6D4)),
-                    _brandShareRow("هواوی", "۵٪", const Color(0xFFEC4899)),
-                    _brandShareRow("سایر", "۷٪", const Color(0xFF94A3B8)),
-                  ],
+                const SizedBox(width: 18),
+                Expanded(
+                  child: Column(
+                    children: [
+                      for (var i = 0; i < brands.length; i++)
+                        _brandShareRow(
+                          brands[i].key,
+                          "${(brands[i].value * 100 / total).round()}٪",
+                          _brandColors[i % _brandColors.length],
+                        ),
+                    ],
+                  ),
                 ),
-              )
-            ],
-          ),
-        ],
-      ),
+              ],
+            ),
     );
   }
 
   Widget _brandShareRow(String name, String percent, Color color) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(
-            children: [
-              Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-              const SizedBox(width: 6),
-              Text(name, style: const TextStyle(fontSize: 11)),
-            ],
-          ),
-          Text(percent, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+          Container(width: 9, height: 9, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(3))),
+          const SizedBox(width: 8),
+          Expanded(child: Text(name, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12))),
+          Text(percent, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
         ],
       ),
     );
   }
 
-  Widget _buildWeeklyBarChart() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: PromaxColors.fieldBorder)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Row(
-                children: [
-                  Icon(Icons.bar_chart_rounded, color: PromaxColors.blueAction, size: 20),
-                  SizedBox(width: 8),
-                  Text("مقایسه سود و فروش (ماه جاری)", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                ],
-              ),
-              Row(
-                children: [
-                  _legendItem("فروش", const Color(0xFF3B82F6)),
-                  const SizedBox(width: 8),
-                  _legendItem("سود", const Color(0xFF10B981)),
-                ],
-              )
-            ],
-          ),
-          const SizedBox(height: 18),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              _barGroup("هفته ۱", 90, 45),
-              _barGroup("هفته ۲", 110, 60),
-              _barGroup("هفته ۳", 135, 75),
-              _barGroup("هفته ۴", 120, 65),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+  Widget _buildPeriodSummary(List<dynamic> salesOrders) {
+    final days = _dailyStats(salesOrders);
+    final count = days.fold<int>(0, (s, d) => s + d.count);
+    final int sales = data?['phone_sales'] ?? 0;
+    final int profit = data?['phone_profit'] ?? 0;
+    final brands = _brandStats(salesOrders);
+    final bestDay = days.isEmpty ? null : (days.toList()..sort((a, b) => b.sales.compareTo(a.sales))).first;
 
-  Widget _barGroup(String week, double h1, double h2) {
-    return Column(
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Container(width: 14, height: h1, decoration: BoxDecoration(color: const Color(0xFF3B82F6), borderRadius: BorderRadius.circular(4))),
-            const SizedBox(width: 4),
-            Container(width: 14, height: h2, decoration: BoxDecoration(color: const Color(0xFF10B981), borderRadius: BorderRadius.circular(4))),
-          ],
-        ),
-        const SizedBox(height: 6),
-        Text(week, style: const TextStyle(fontSize: 9.5, color: PromaxColors.textMuted)),
-      ],
-    );
-  }
-
-  Widget _buildLowStockTable() {
-    final items = [
-      {"model": "iPhone 16 Pro 256GB", "stock": "۱", "min": "۳", "status": "نیاز به خرید", "color": Colors.red},
-      {"model": "Samsung S25 Ultra 512GB", "stock": "۲", "min": "۵", "status": "نیاز به خرید", "color": Colors.red},
-      {"model": "iPhone 15 128GB", "stock": "۲", "min": "۴", "status": "نیاز به خرید", "color": Colors.red},
-      {"model": "AirPods Pro 2", "stock": "۳", "min": "۸", "status": "نیاز به خرید", "color": Colors.red},
-      {"model": "Xiaomi 14 256GB", "stock": "۴", "min": "۱۰", "status": "نزدیک به اتمام", "color": Colors.amber.shade800},
+    final rows = <MapEntry<String, String>>[
+      MapEntry("تعداد دستگاه فروخته‌شده", "$count دستگاه"),
+      if (count > 0) MapEntry("میانگین مبلغ هر فروش", "${formatToman(sales ~/ count)} ت"),
+      if (count > 0) MapEntry("میانگین سود هر دستگاه", "${formatToman(profit ~/ count)} ت"),
+      if (sales > 0) MapEntry("حاشیه‌ی سود", "${(profit * 100 / sales).toStringAsFixed(1)}٪"),
+      if (brands.isNotEmpty) MapEntry("پرفروش‌ترین برند", brands.first.key),
+      if (bestDay != null) MapEntry("پرفروش‌ترین روز", "${formatShamsi(bestDay.date.toIso8601String(), withTime: false)} (${_compactToman(bestDay.sales)})"),
     ];
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: PromaxColors.fieldBorder)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.warning_amber_rounded, color: Colors.red, size: 20),
-                  SizedBox(width: 8),
-                  Text("کالاهای کم‌موجودی", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.red)),
-                ],
-              ),
-              Text("مشاهده همه ←", style: TextStyle(fontSize: 10.5, color: PromaxColors.blueAction, fontWeight: FontWeight.bold)),
-            ],
-          ),
-          const SizedBox(height: 12),
-          const Row(
-            children: [
-              Expanded(flex: 4, child: Text("مدل دستگاه", style: TextStyle(fontSize: 10, color: PromaxColors.textMuted))),
-              Expanded(flex: 2, child: Center(child: Text("موجودی", style: TextStyle(fontSize: 10, color: PromaxColors.textMuted)))),
-              Expanded(flex: 2, child: Center(child: Text("حداقل", style: TextStyle(fontSize: 10, color: PromaxColors.textMuted)))),
-              Expanded(flex: 3, child: Center(child: Text("وضعیت", style: TextStyle(fontSize: 10, color: PromaxColors.textMuted)))),
-            ],
-          ),
-          const Divider(height: 14),
-          ...items.map((it) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 5),
-                child: Row(
-                  children: [
-                    Expanded(flex: 4, child: Text(it['model'] as String, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold))),
-                    Expanded(flex: 2, child: Center(child: Text(it['stock'] as String, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)))),
-                    Expanded(flex: 2, child: Center(child: Text(it['min'] as String, style: const TextStyle(fontSize: 11, color: PromaxColors.textMuted)))),
-                    Expanded(
-                      flex: 3,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 2),
-                        decoration: BoxDecoration(color: (it['color'] as Color).withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
-                        child: Center(
-                          child: Text(it['status'] as String, style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: it['color'] as Color)),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              )),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRecentActivitiesAndAiSummary() {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF0FDF4),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFFBBF7D0)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Row(
+    return _sectionCard(
+      icon: Icons.insights_rounded,
+      title: "خلاصه‌ی دوره ($selectedPeriodTitle)",
+      child: count == 0
+          ? _emptyChart("در این بازه فروشی ثبت نشده است")
+          : Column(
+              children: [
+                for (var i = 0; i < rows.length; i++) ...[
+                  if (i > 0) const Divider(height: 18),
+                  Row(
                     children: [
-                      Icon(Icons.auto_awesome, color: Color(0xFF16A34A), size: 18),
-                      SizedBox(width: 8),
-                      Text("تحلیل هوشمند فروش پرومکس", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5, color: Color(0xFF15803D))),
+                      Expanded(child: Text(rows[i].key, style: const TextStyle(fontSize: 12, color: PromaxColors.textMuted))),
+                      Text(rows[i].value, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold)),
                     ],
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(color: Colors.green.shade200, borderRadius: BorderRadius.circular(10)),
-                    child: const Text("دستیار هوشمند", style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF14532D))),
-                  ),
                 ],
-              ),
-              const SizedBox(height: 10),
-              const Text(
-                "• در این ماه فروش نسبت به ماه قبل ۲۴٪ افزایش داشته است.\n• بیشترین فروش و سود مربوط به برند اپل بوده است.\n• ۵ مدل به حداقل موجودی رسیده‌اند و نیاز به شارژ انبار دارند.",
-                style: TextStyle(fontSize: 11, height: 1.6, color: Color(0xFF166534)),
-              ),
-            ],
-          ),
-        ),
-      ],
+              ],
+            ),
     );
   }
 
@@ -2187,51 +2659,43 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
   }
 }
 
-class SmoothLineChartPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final p1 = Paint()..color = const Color(0xFF2563EB)..strokeWidth = 2.5..style = PaintingStyle.stroke;
-    final p2 = Paint()..color = const Color(0xFF10B981)..strokeWidth = 2.5..style = PaintingStyle.stroke;
-    final path1 = Path();
-    final path2 = Path();
-
-    path1.moveTo(0, size.height * 0.7);
-    path1.cubicTo(size.width * 0.25, size.height * 0.4, size.width * 0.4, size.height * 0.6, size.width * 0.5, size.height * 0.3);
-    path1.cubicTo(size.width * 0.7, size.height * 0.8, size.width * 0.85, size.height * 0.35, size.width, size.height * 0.2);
-
-    path2.moveTo(0, size.height * 0.85);
-    path2.cubicTo(size.width * 0.25, size.height * 0.65, size.width * 0.4, size.height * 0.8, size.width * 0.5, size.height * 0.55);
-    path2.cubicTo(size.width * 0.7, size.height * 0.9, size.width * 0.85, size.height * 0.6, size.width, size.height * 0.5);
-
-    canvas.drawPath(path1, p1);
-    canvas.drawPath(path2, p2);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+class _DayStat {
+  final DateTime date;
+  final int sales;
+  final int? profit; // اگر سرور قدیمی باشد سود روزانه در دسترس نیست
+  final int count;
+  const _DayStat({required this.date, required this.sales, required this.profit, required this.count});
 }
 
 class DonutChartPainter extends CustomPainter {
+  final List<double> values;
+  final List<Color> colors;
+  DonutChartPainter({required this.values, required this.colors});
+
   @override
   void paint(Canvas canvas, Size size) {
-    final rect = Rect.fromLTWH(0, 0, size.width, size.height);
-    final paint = Paint()..style = PaintingStyle.stroke..strokeWidth = 18;
-    paint.color = const Color(0xFF2563EB);
-    canvas.drawArc(rect, -1.57, 2.6, false, paint);
-    paint.color = const Color(0xFF6366F1);
-    canvas.drawArc(rect, 1.05, 1.7, false, paint);
-    paint.color = const Color(0xFFF97316);
-    canvas.drawArc(rect, 2.8, 0.7, false, paint);
-    paint.color = const Color(0xFF06B6D4);
-    canvas.drawArc(rect, 3.55, 0.4, false, paint);
-    paint.color = const Color(0xFFEC4899);
-    canvas.drawArc(rect, 4.0, 0.3, false, paint);
-    paint.color = const Color(0xFF94A3B8);
-    canvas.drawArc(rect, 4.35, 0.4, false, paint);
+    const stroke = 16.0;
+    final rect = Rect.fromLTWH(stroke / 2, stroke / 2, size.width - stroke, size.height - stroke);
+    final total = values.fold<double>(0, (s, v) => s + v);
+    final bg = Paint()..style = PaintingStyle.stroke..strokeWidth = stroke..color = const Color(0xFFF1F5F9);
+    canvas.drawArc(rect, 0, 6.2832, false, bg);
+    if (total <= 0) return;
+    const gap = 0.04;
+    var start = -1.5708;
+    for (var i = 0; i < values.length; i++) {
+      final sweep = values[i] / total * 6.2832;
+      final paint = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = stroke
+        ..color = colors[i % colors.length];
+      canvas.drawArc(rect, start + (values.length > 1 ? gap / 2 : 0), (sweep - (values.length > 1 ? gap : 0)).clamp(0.01, 6.2832), false, paint);
+      start += sweep;
+    }
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant DonutChartPainter oldDelegate) =>
+      oldDelegate.values.toString() != values.toString();
 }
 
 // ------------------- بخش انبار گوشی -------------------
@@ -2314,7 +2778,7 @@ class _InventoryAndReportsScreenState extends State<InventoryAndReportsScreen> {
             children: [
               DropdownButtonFormField<String>(
                 value: currentReg,
-                decoration: const InputDecoration(labelText: "وضعیت رجیستری", border: OutlineInputBorder()),
+                decoration: const InputDecoration(labelText: "وضعیت رجیستری"),
                 items: registryOptions.map((r) => DropdownMenuItem(value: r, child: Text(r, style: const TextStyle(fontSize: 12)))).toList(),
                 onChanged: (v) => setDState(() => currentReg = v!),
               ),
@@ -2369,18 +2833,18 @@ class _InventoryAndReportsScreenState extends State<InventoryAndReportsScreen> {
               children: [
                 DropdownButtonFormField<String>(
                   value: selectedBrand,
-                  decoration: const InputDecoration(labelText: "برند دستگاه", border: OutlineInputBorder()),
+                  decoration: const InputDecoration(labelText: "برند دستگاه"),
                   items: popularBrands.map((b) => DropdownMenuItem(value: b, child: Text(b, style: const TextStyle(fontSize: 12)))).toList(),
                   onChanged: (v) => setDState(() => selectedBrand = v!),
                 ),
                 const SizedBox(height: 10),
-                TextField(controller: modelCtl, decoration: const InputDecoration(labelText: "مدل دستگاه", border: OutlineInputBorder())),
+                TextField(controller: modelCtl, decoration: const InputDecoration(labelText: "مدل دستگاه")),
                 const SizedBox(height: 10),
-                TextField(controller: imeiCtl, decoration: const InputDecoration(labelText: "IMEI 1", border: OutlineInputBorder())),
+                TextField(controller: imeiCtl, decoration: const InputDecoration(labelText: "IMEI 1")),
                 const SizedBox(height: 10),
-                TextField(controller: imei2Ctl, decoration: const InputDecoration(labelText: "IMEI 2", border: OutlineInputBorder())),
+                TextField(controller: imei2Ctl, decoration: const InputDecoration(labelText: "IMEI 2")),
                 const SizedBox(height: 10),
-                TextField(controller: priceCtl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: "مبلغ (تومان)", border: OutlineInputBorder())),
+                TextField(controller: priceCtl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: "مبلغ (تومان)")),
               ],
             ),
           ),
@@ -2507,7 +2971,7 @@ class _InventoryAndReportsScreenState extends State<InventoryAndReportsScreen> {
     }).toList();
 
     return PromaxPageLayout(
-      title: "انبار موبایل پرومکس",
+      title: "انبار موبایل",
       adminName: widget.adminData['full_name'],
       subtitle: "تفکیک کامل موجودی‌ها و دستگاه‌های فروخته‌شده",
       openDrawer: widget.openDrawer,
@@ -2709,7 +3173,7 @@ class _BuyPhoneScreenState extends State<BuyPhoneScreen> {
   @override
   Widget build(BuildContext context) {
     return PromaxPageLayout(
-      title: "خرید کالای",
+      title: "خرید کالا",
       adminName: widget.adminData['full_name'],
       subtitle: "ثبت دستگاه با دو IMEI و استعلام همتا",
       openDrawer: widget.openDrawer,
@@ -2717,92 +3181,48 @@ class _BuyPhoneScreenState extends State<BuyPhoneScreen> {
       onSecurityTap: widget.onSecurityTap,
       notificationCount: widget.notificationCount,
       body: ListView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(16, 18, 16, 24),
         children: [
-          Row(
+          _formSection(
+            title: "مشخصات دستگاه",
+            icon: Icons.phone_iphone_rounded,
             children: [
-              Expanded(child: _buildInput(controller: imeiCtl, hint: "سریال اول (IMEI 1)", prefixIcon: Icons.view_week_outlined)),
-              const SizedBox(width: 8),
-              GestureDetector(
-                onTap: () => openSafeScanner(context, (code) => setState(() => imeiCtl.text = code)),
-                child: Container(height: 52, width: 52, decoration: BoxDecoration(color: PromaxColors.blueAction, borderRadius: BorderRadius.circular(14)), child: const Icon(Icons.qr_code_scanner_rounded, color: Colors.white, size: 24)),
-              ),
+              _scanField(context: context, controller: imeiCtl, hint: "سریال اول (IMEI 1)", onScanned: (code) => setState(() => imeiCtl.text = code)),
+              _scanField(context: context, controller: imei2Ctl, hint: "سریال دوم (IMEI 2 - اختیاری)", onScanned: (code) => setState(() => imei2Ctl.text = code)),
+              _dropdownField(label: "برند", icon: Icons.sell_outlined, value: selectedBrand, items: popularBrands, onChanged: (v) => setState(() => selectedBrand = v)),
+              _buildInput(controller: modelCtl, hint: "مدل دستگاه", prefixIcon: Icons.phone_android_outlined),
             ],
           ),
-          const SizedBox(height: 10),
-          Row(
+          _formSection(
+            title: "قیمت و وضعیت",
+            icon: Icons.payments_outlined,
             children: [
-              Expanded(child: _buildInput(controller: imei2Ctl, hint: "سریال دوم (IMEI 2 - اختیاری)", prefixIcon: Icons.view_week_outlined)),
-              const SizedBox(width: 8),
-              GestureDetector(
-                onTap: () => openSafeScanner(context, (code) => setState(() => imei2Ctl.text = code)),
-                child: Container(height: 52, width: 52, decoration: BoxDecoration(color: PromaxColors.blueAction, borderRadius: BorderRadius.circular(14)), child: const Icon(Icons.qr_code_scanner_rounded, color: Colors.white, size: 24)),
-              ),
+              _buildInput(controller: priceCtl, hint: "مبلغ خرید توافقی (تومان)", prefixIcon: Icons.monetization_on_outlined, isNumber: true),
+              _dropdownField(label: "وضعیت رجیستری", icon: Icons.app_registration_rounded, value: selectedRegistry, items: registryOptions, onChanged: (v) => setState(() => selectedRegistry = v)),
+              _hamtaTile(value: hamtaVerified, onChanged: (v) => setState(() => hamtaVerified = v)),
             ],
           ),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: PromaxColors.fieldBorder, width: 1.2)),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: selectedBrand,
-                isExpanded: true,
-                items: popularBrands.map((b) => DropdownMenuItem(value: b, child: Text("برند: $b", style: const TextStyle(fontSize: 13)))).toList(),
-                onChanged: (v) => setState(() => selectedBrand = v!),
+          _formSection(
+            title: "فروشنده",
+            icon: Icons.person_outline_rounded,
+            children: [
+              _buildInput(controller: nameCtl, hint: "نام فروشنده", prefixIcon: Icons.person_outline),
+              _buildInput(controller: phoneCtl, hint: "شماره تماس فروشنده", prefixIcon: Icons.phone_outlined, isPhone: true),
+              TextField(
+                controller: nIdCtl,
+                keyboardType: TextInputType.number,
+                inputFormatters: [NationalIdFormatter()],
+                style: const TextStyle(fontSize: 14),
+                decoration: const InputDecoration(
+                  hintText: "کد ملی فروشنده (۱۰ رقم)",
+                  prefixIcon: Icon(Icons.badge_outlined, size: 20),
+                ),
               ),
-            ),
+              _buildInput(controller: descCtl, hint: "یادداشت و توضیحات معامله", prefixIcon: Icons.note_alt_outlined),
+            ],
           ),
-          const SizedBox(height: 12),
-          _buildInput(controller: modelCtl, hint: "مدل دستگاه", prefixIcon: Icons.phone_android_outlined),
-          const SizedBox(height: 12),
-          _buildInput(controller: priceCtl, hint: "مبلغ خرید توافقی (تومان)", prefixIcon: Icons.monetization_on_outlined, isNumber: true),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: PromaxColors.fieldBorder, width: 1.2)),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: selectedRegistry,
-                isExpanded: true,
-                items: registryOptions.map((r) => DropdownMenuItem(value: r, child: Text("وضعیت رجیستری: $r", style: const TextStyle(fontSize: 13)))).toList(),
-                onChanged: (v) => setState(() => selectedRegistry = v!),
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          CheckboxListTile(
-            value: hamtaVerified,
-            activeColor: PromaxColors.blueAction,
-            title: const Text("تست اصالت و رجیستری سامانه همتا انجام شد", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-            onChanged: (v) => setState(() => hamtaVerified = v!),
-          ),
-          const Divider(height: 24),
-          _buildInput(controller: nameCtl, hint: "نام فروشنده", prefixIcon: Icons.person_outline),
-          const SizedBox(height: 12),
-          _buildInput(controller: phoneCtl, hint: "شماره تماس فروشنده", prefixIcon: Icons.phone_outlined, isPhone: true),
-          const SizedBox(height: 12),
-          TextField(
-            controller: nIdCtl,
-            keyboardType: TextInputType.number,
-            inputFormatters: [NationalIdFormatter()],
-            decoration: InputDecoration(
-              hintText: "کد ملی فروشنده (دقیقاً ۱۰ رقم)",
-              prefixIcon: const Icon(Icons.badge_outlined, color: PromaxColors.textMuted, size: 20),
-              filled: true, fillColor: Colors.white,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: PromaxColors.fieldBorder, width: 1.2)),
-            ),
-          ),
-          const SizedBox(height: 12),
-          _buildInput(controller: descCtl, hint: "یادداشت و توضیحات معامله", prefixIcon: Icons.note_alt_outlined),
-          const SizedBox(height: 24),
-          ElevatedButton(
-            onPressed: submit,
-            style: ElevatedButton.styleFrom(backgroundColor: PromaxColors.blueAction, foregroundColor: Colors.white, minimumSize: const Size.fromHeight(54), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24))),
-            child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.save_outlined), SizedBox(width: 8), Text("ثبت در انبار و صدور فاکتور", style: TextStyle(fontWeight: FontWeight.bold))]),
-          ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 4),
+          _submitButton(label: "ثبت در انبار و صدور فاکتور", icon: Icons.save_outlined, color: PromaxColors.blueAction, onPressed: submit),
         ],
       ),
     );
@@ -3008,89 +3428,154 @@ class _SellPhoneScreenState extends State<SellPhoneScreen> {
       onSecurityTap: widget.onSecurityTap,
       notificationCount: widget.notificationCount,
       body: ListView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(16, 18, 16, 24),
         children: [
-          Row(
+          _formSection(
+            title: "دستگاه",
+            icon: Icons.phone_iphone_rounded,
+            color: PromaxColors.greenAction,
             children: [
-              Expanded(child: _buildInput(controller: imeiCtl, hint: "شناسه IMEI دستگاه", prefixIcon: Icons.view_week_outlined)),
-              const SizedBox(width: 8),
-              GestureDetector(
-                onTap: () => openSafeScanner(context, (code) => setState(() => imeiCtl.text = code)),
-                child: Container(height: 52, width: 52, decoration: BoxDecoration(color: PromaxColors.blueAction, borderRadius: BorderRadius.circular(14)), child: const Icon(Icons.qr_code_scanner_rounded, color: Colors.white, size: 24)),
-              ),
+              _scanField(context: context, controller: imeiCtl, hint: "شناسه IMEI دستگاه در انبار", color: PromaxColors.greenAction, onScanned: (code) => setState(() => imeiCtl.text = code)),
+              _dropdownField(label: "انتقال مالکیت / رجیستری", icon: Icons.app_registration_rounded, value: selectedRegistry, items: registryOptions, onChanged: (v) => setState(() => selectedRegistry = v)),
+              _hamtaTile(value: hamtaVerified, color: PromaxColors.greenAction, onChanged: (v) => setState(() => hamtaVerified = v)),
             ],
           ),
-          const SizedBox(height: 12),
-          _buildInput(controller: priceCtl, hint: "قیمت نهایی فروش (تومان)", prefixIcon: Icons.sell_outlined, isNumber: true, onChanged: (_) => setState(() {})),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: PromaxColors.fieldBorder, width: 1.2)),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: selectedRegistry,
-                isExpanded: true,
-                items: registryOptions.map((r) => DropdownMenuItem(value: r, child: Text("انتقال مالکیت / رجیستری: $r", style: const TextStyle(fontSize: 13)))).toList(),
-                onChanged: (v) => setState(() => selectedRegistry = v!),
-              ),
-            ),
+          _formSection(
+            title: "قیمت و پرداخت",
+            icon: Icons.payments_outlined,
+            color: PromaxColors.greenAction,
+            children: [
+              _buildInput(controller: priceCtl, hint: "قیمت نهایی فروش (تومان)", prefixIcon: Icons.sell_outlined, isNumber: true, onChanged: (_) => setState(() {})),
+              _paymentMethodSelector(),
+              if (selectedMethod == 'نقدی')
+                _buildInput(controller: payDetailsCtl, hint: "واریز به کدام کارت / کارتخوان؟", prefixIcon: Icons.credit_card_rounded),
+              if (selectedMethod == 'قرضی')
+                Material(
+                  color: const Color(0xFFFFFBEB),
+                  borderRadius: BorderRadius.circular(14),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(14),
+                    onTap: _pickShamsiDate,
+                    child: Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFFFCD34D))),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.event_rounded, color: Color(0xFFB45309), size: 20),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              creditDueShamsi == null ? "انتخاب تاریخ موعد تسویه (شمسی)" : "موعد پرداخت: $creditDueShamsi",
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF92400E)),
+                            ),
+                          ),
+                          const Icon(Icons.chevron_left_rounded, color: Color(0xFFB45309)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              _buildInput(controller: paidCtl, hint: "مبلغ دریافتی (پیش‌پرداخت/نقدی)", prefixIcon: Icons.payments_outlined, isNumber: true, onChanged: (_) => setState(() {})),
+              _remainingSummary(),
+            ],
           ),
-          const SizedBox(height: 8),
-          CheckboxListTile(
-            value: hamtaVerified,
-            activeColor: PromaxColors.greenAction,
-            title: const Text("تست اصالت و رجیستری انجام شد", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-            onChanged: (v) => setState(() => hamtaVerified = v!),
+          _formSection(
+            title: "خریدار",
+            icon: Icons.person_outline_rounded,
+            color: PromaxColors.greenAction,
+            children: [
+              _buildInput(controller: buyerNameCtl, hint: "نام خریدار", prefixIcon: Icons.person_outline),
+              _buildInput(controller: buyerPhoneCtl, hint: "شماره تماس خریدار", prefixIcon: Icons.phone_outlined, isPhone: true),
+            ],
           ),
-          const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: PromaxColors.fieldBorder, width: 1.2)),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: selectedMethod,
-                isExpanded: true,
-                items: ['نقدی', 'قسطی', 'چکی', 'قرضی'].map((m) => DropdownMenuItem<String>(value: m, child: Text("روش تسویه: $m", style: const TextStyle(fontSize: 13)))).toList(),
-                onChanged: (v) => setState(() => selectedMethod = v!),
-              ),
-            ),
-          ),
-          if (selectedMethod == 'نقدی') ...[
-            const SizedBox(height: 12),
-            _buildInput(controller: payDetailsCtl, hint: "واریز به کدام کارت شد یا با پوز کشیده شد؟", prefixIcon: Icons.credit_card_rounded),
-          ],
-          if (selectedMethod == 'قرضی') ...[
-            const SizedBox(height: 12),
-            InkWell(
-              onTap: _pickShamsiDate,
-              child: Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(color: Colors.amber.shade50, borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.amber.shade300)),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(creditDueShamsi == null ? "انتخاب تاریخ موعد تسویه قرض (شمسی)" : "موعد پرداخت: $creditDueShamsi", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.brown)),
-                    const Icon(Icons.calendar_month, color: Colors.brown),
-                  ],
+          const SizedBox(height: 4),
+          _submitButton(label: "ثبت فروش و صدور فاکتور", icon: Icons.check_circle_outline, color: PromaxColors.greenAction, onPressed: submit, loading: isSubmitting),
+        ],
+      ),
+    );
+  }
+
+  int _parseAmount(String text) => int.tryParse(text.replaceAll(',', '').trim()) ?? 0;
+
+  Widget _paymentMethodSelector() {
+    const methods = {
+      'نقدی': Icons.payments_outlined,
+      'قسطی': Icons.calendar_view_month_rounded,
+      'چکی': Icons.receipt_long_outlined,
+      'قرضی': Icons.handshake_outlined,
+    };
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text("روش تسویه", style: TextStyle(fontSize: 12, color: PromaxColors.textMuted)),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            for (final m in methods.entries)
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 3),
+                  child: GestureDetector(
+                    onTap: () => setState(() => selectedMethod = m.key),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      decoration: BoxDecoration(
+                        color: selectedMethod == m.key ? PromaxColors.greenAction.withOpacity(0.08) : Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: selectedMethod == m.key ? PromaxColors.greenAction : PromaxColors.fieldBorder,
+                          width: selectedMethod == m.key ? 1.6 : 1,
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          Icon(m.value, size: 20, color: selectedMethod == m.key ? PromaxColors.greenAction : PromaxColors.textMuted),
+                          const SizedBox(height: 4),
+                          Text(
+                            m.key,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: selectedMethod == m.key ? FontWeight.bold : FontWeight.w500,
+                              color: selectedMethod == m.key ? PromaxColors.greenAction : PromaxColors.textMuted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
               ),
-            ),
           ],
-          const SizedBox(height: 12),
-          _buildInput(controller: paidCtl, hint: "مبلغ دریافتی (پیش‌پرداخت/نقدی)", prefixIcon: Icons.payments_outlined, isNumber: true, onChanged: (_) => setState(() {})),
-          const SizedBox(height: 12),
-          _buildInput(controller: buyerNameCtl, hint: "نام خریدار", prefixIcon: Icons.person_outline),
-          const SizedBox(height: 12),
-          _buildInput(controller: buyerPhoneCtl, hint: "شماره تماس خریدار", prefixIcon: Icons.phone_outlined, isPhone: true),
-          const SizedBox(height: 24),
-          ElevatedButton(
-            onPressed: isSubmitting ? null : submit,
-            style: ElevatedButton.styleFrom(backgroundColor: PromaxColors.greenAction, foregroundColor: Colors.white, minimumSize: const Size.fromHeight(54), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24))),
-            child: isSubmitting
-                ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
-                : const Row(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.check_circle_outline), SizedBox(width: 8), Text("ثبت خروج از انبار و صدور فاکتور", style: TextStyle(fontWeight: FontWeight.bold))]),
+        ),
+      ],
+    );
+  }
+
+  /// خلاصه‌ی زنده‌ی مبلغ فروش، دریافتی و مانده
+  Widget _remainingSummary() {
+    if (_parseAmount(priceCtl.text) <= 0) return const SizedBox.shrink();
+    // همان محاسبه‌ای که هنگام ثبت فروش به سرور فرستاده می‌شود
+    final settled = remaining <= 0;
+    final color = settled ? PromaxColors.greenAction : const Color(0xFFDC2626);
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.06),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withOpacity(0.25)),
+      ),
+      child: Row(
+        children: [
+          Icon(settled ? Icons.check_circle_rounded : Icons.info_outline_rounded, color: color, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              settled ? "تسویه‌ی کامل" : "مانده‌ی بدهی خریدار",
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: color),
+            ),
           ),
-          const SizedBox(height: 20),
+          if (!settled) Text("${formatToman(remaining)} تومان", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: color)),
         ],
       ),
     );
@@ -3186,7 +3671,7 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(controller: nameCtl, decoration: const InputDecoration(labelText: "نام کالا")),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               Row(
                 children: [
                   Expanded(child: TextField(controller: barcodeCtl, decoration: const InputDecoration(labelText: "بارکد (اختیاری)"))),
@@ -3198,8 +3683,11 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
               ),
               const SizedBox(height: 8),
               TextField(controller: catCtl, decoration: const InputDecoration(labelText: "دسته‌‌بندی")),
+              const SizedBox(height: 12),
               TextField(controller: stockCtl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: "تعداد موجودی")),
+              const SizedBox(height: 12),
               TextField(controller: buyCtl, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly, CurrencyInputFormatter()], decoration: const InputDecoration(labelText: "قیمت خرید (تومان)")),
+              const SizedBox(height: 12),
               TextField(controller: saleCtl, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly, CurrencyInputFormatter()], decoration: const InputDecoration(labelText: "قیمت فروش مصوب (تومان)")),
             ],
           ),
@@ -3249,7 +3737,7 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(controller: nameCtl, decoration: const InputDecoration(labelText: "نام کالا")),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               Row(
                 children: [
                   Expanded(child: TextField(controller: barcodeCtl, decoration: const InputDecoration(labelText: "بارکد"))),
@@ -3257,7 +3745,9 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
                 ],
               ),
               TextField(controller: stockCtl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: "تعداد موجودی")),
+              const SizedBox(height: 12),
               TextField(controller: buyCtl, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly, CurrencyInputFormatter()], decoration: const InputDecoration(labelText: "قیمت خرید (تومان)")),
+              const SizedBox(height: 12),
               TextField(controller: saleCtl, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly, CurrencyInputFormatter()], decoration: const InputDecoration(labelText: "قیمت فروش (تومان)")),
             ],
           ),
@@ -3372,26 +3862,14 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: periodKeys.keys.map((p) {
-                        final isSel = selectedPeriodTitle == p;
-                        return Padding(
-                          padding: const EdgeInsets.only(left: 6),
-                          child: ChoiceChip(
-                            label: Text(p, style: TextStyle(fontSize: 11, fontWeight: isSel ? FontWeight.bold : FontWeight.normal, color: isSel ? Colors.white : Colors.black87)),
-                            selected: isSel,
-                            selectedColor: Colors.purple.shade700,
-                            backgroundColor: Colors.white,
-                            onSelected: (_) {
-                              setState(() => selectedPeriodTitle = p);
-                              load();
-                            },
-                          ),
-                        );
-                      }).toList(),
-                    ),
+                  PeriodSelector(
+                    periods: periodKeys.keys.toList(),
+                    selected: selectedPeriodTitle,
+                    color: Colors.purple.shade700,
+                    onSelected: (p) {
+                      setState(() => selectedPeriodTitle = p);
+                      load();
+                    },
                   ),
                   const SizedBox(height: 12),
 

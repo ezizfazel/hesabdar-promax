@@ -1,7 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:printing/printing.dart';
 import 'package:shamsi_date/shamsi_date.dart';
 
 class InvoiceHelper {
@@ -25,10 +24,13 @@ class InvoiceHelper {
     required bool isSale,
   }) async {
     final pdf = pw.Document();
-    final font = await PdfGoogleFonts.vazirmatnRegular();
-    final fontBold = await PdfGoogleFonts.vazirmatnBold();
+    // فونت از داخل خود اپ خوانده می‌شود (قبلاً هر بار از Google Fonts دانلود می‌شد
+    // که بدون دسترسی به گوگل، ساخت فاکتور را کند یا ناموفق می‌کرد)
+    final font = pw.Font.ttf(await rootBundle.load('assets/fonts/Vazirmatn-Regular.ttf'));
+    final fontBold = pw.Font.ttf(await rootBundle.load('assets/fonts/Vazirmatn-Bold.ttf'));
     final now = Jalali.now();
-    final timeStr = "${DateTime.now().hour}:${DateTime.now().minute.toString().padLeft(2, '0')}";
+    final timeStr = "${DateTime.now().hour.toString().padLeft(2, '0')}:${DateTime.now().minute.toString().padLeft(2, '0')}";
+    final dateStr = "${now.year}/${now.month.toString().padLeft(2, '0')}/${now.day.toString().padLeft(2, '0')}";
     final invoiceNumber = "PMX-${now.year}-${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}-${DateTime.now().millisecond}";
 
     String fmt(int n) => n.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},');
@@ -58,7 +60,7 @@ class InvoiceHelper {
                     children: [
                       pw.Text("شماره فاکتور: $invoiceNumber", style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10.5)),
                       pw.SizedBox(height: 4),
-                      pw.Text("تاریخ صدور: ${now.year}/${now.month}/${now.day}  |  ساعت: $timeStr", style: const pw.TextStyle(fontSize: 9.5, color: PdfColors.grey700)),
+                      pw.Text("تاریخ صدور: $dateStr  |  ساعت: $timeStr", style: const pw.TextStyle(fontSize: 9.5, color: PdfColors.grey700)),
                     ],
                   ),
                 ),

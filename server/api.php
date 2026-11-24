@@ -465,6 +465,24 @@ if ($action === 'get_summary') {
             }
         }
 
+        // آمار روزانه برای نمودار روند فروش و سود (تجمیع کامل، بدون محدودیت تعداد)
+        $daily = [];
+        $dailyRes = @$conn->query("SELECT DATE(sale_date) AS d, COALESCE(SUM(sale_price), 0) AS sales, COALESCE(SUM(profit), 0) AS profit, COUNT(id) AS cnt FROM phones WHERE status = 'SOLD' AND $dateConditionPhone GROUP BY DATE(sale_date) ORDER BY d ASC");
+        if ($dailyRes) {
+            while ($r = $dailyRes->fetch_assoc()) {
+                $daily[] = ["date" => $r['d'], "sales" => (int)$r['sales'], "profit" => (int)$r['profit'], "count" => (int)$r['cnt']];
+            }
+        }
+
+        // سهم هر برند از فروش دوره
+        $brands = [];
+        $brandRes = @$conn->query("SELECT brand, COALESCE(SUM(sale_price), 0) AS sales, COUNT(id) AS cnt FROM phones WHERE status = 'SOLD' AND $dateConditionPhone GROUP BY brand ORDER BY sales DESC");
+        if ($brandRes) {
+            while ($r = $brandRes->fetch_assoc()) {
+                $brands[] = ["brand" => $r['brand'] ?? '', "sales" => (int)$r['sales'], "count" => (int)$r['cnt']];
+            }
+        }
+
         $mobileLiquidity = $bankBal + (int)($invPhone['cost'] ?? 0);
 
         echo json_encode([
@@ -482,7 +500,9 @@ if ($action === 'get_summary') {
                 "total_expenses" => $totalExpensesAmount,
                 "expenses" => $expensesList,
                 "debtors" => $debtorsList,
-                "sales_orders" => $salesOrders
+                "sales_orders" => $salesOrders,
+                "daily" => $daily,
+                "brands" => $brands
             ]
         ], JSON_UNESCAPED_UNICODE);
     } catch (Throwable $e) {
