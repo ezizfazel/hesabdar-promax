@@ -7,6 +7,6 @@
 CGIPassAuth On
 
 # جلوگیری از دسترسی مستقیم به فایل تنظیمات و migration
-<FilesMatch "^(config\.php|config\.example\.php|migration\.sql)$">
+<FilesMatch "^(config\.php|config\.example\.php|migration\.sql|backup_lib\.php)$">
     Require all denied
 </FilesMatch>

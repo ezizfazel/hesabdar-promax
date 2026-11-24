@@ -44,8 +44,8 @@ class Api {
     };
   }
 
-  static Future<http.Response> get(Uri url, {Map<String, String>? headers}) async {
-    final res = await http.get(url, headers: _headers(headers)).timeout(timeout);
+  static Future<http.Response> get(Uri url, {Map<String, String>? headers, Duration? timeout}) async {
+    final res = await http.get(url, headers: _headers(headers)).timeout(timeout ?? Api.timeout);
     _checkUnauthorized(res);
     return res;
   }

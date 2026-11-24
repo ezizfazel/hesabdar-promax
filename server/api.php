@@ -936,6 +936,37 @@ if ($action === 'update_admin_permissions') {
     exit;
 }
 
+// ------------------- پشتیبان‌گیری (فقط مدیر ارشد) -------------------
+if ($action === 'backup_download') {
+    requireSuperAdmin($me);
+    require_once __DIR__ . '/backup_lib.php';
+    @set_time_limit(300);
+    try {
+        $gz = promax_backup_gz($conn, $config['db_name']);
+    } catch (Throwable $e) {
+        server_error("خطا در تهیه‌ی نسخه‌ی پشتیبان", "backup_download: " . $e->getMessage());
+    }
+    addLog($conn, $me['full_name'], 'پشتیبان‌گیری', 'دریافت نسخه‌ی پشتیبان کامل دیتابیس');
+    header('Content-Type: application/gzip');
+    header('Content-Disposition: attachment; filename="' . promax_backup_filename() . '"');
+    header('Content-Length: ' . strlen($gz));
+    header('Cache-Control: no-store');
+    echo $gz;
+    exit;
+}
+
+if ($action === 'backup_status') {
+    requireSuperAdmin($me);
+    $backupDir = rtrim($config['backup_dir'] ?? (__DIR__ . '/backups'), '/');
+    $files = is_dir($backupDir) ? (glob("$backupDir/promax-backup-*.sql.gz") ?: []) : [];
+    rsort($files);
+    $list = [];
+    foreach (array_slice($files, 0, 14) as $f) {
+        $list[] = ["name" => basename($f), "size" => (int)@filesize($f), "time" => date('Y-m-d H:i:s', (int)@filemtime($f))];
+    }
+    json_out(["status" => "success", "data" => ["auto_backups" => $list, "count" => count($files)]]);
+}
+
 if ($action === 'get_logs') {
     requireSuperAdmin($me);
     $res = $conn->query("SELECT * FROM activity_logs ORDER BY id DESC LIMIT 100");

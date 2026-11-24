@@ -10,6 +10,8 @@ import 'package:qr_code_scanner_plus/qr_code_scanner_plus.dart';
 import 'package:shamsi_date/shamsi_date.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'api.dart';
 import 'invoice.dart';
 
@@ -1577,6 +1579,17 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                         _showAdminManagementPanel();
                       },
                     ),
+                    const SizedBox(height: 10),
+                    _drawerTile(
+                      icon: Icons.cloud_download_outlined,
+                      color: const Color(0xFF7C3AED),
+                      title: "پشتیبان‌گیری از اطلاعات",
+                      subtitle: "دریافت نسخه‌ی کامل و وضعیت پشتیبان خودکار",
+                      onTap: () {
+                        Navigator.pop(context);
+                        _showBackupSheet();
+                      },
+                    ),
                   ],
                 ],
               ),
@@ -1634,6 +1647,152 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         ),
       ),
     );
+  }
+
+  // ------------------- پشتیبان‌گیری -------------------
+
+  Future<void> _showBackupSheet() async {
+    List<dynamic> autoBackups = [];
+    bool statusLoaded = false;
+    try {
+      final res = await Api.get(Uri.parse("$serverUrl?action=backup_status"));
+      final d = jsonDecode(res.body);
+      if (d is Map && d['status'] == 'success') {
+        autoBackups = (d['data']?['auto_backups'] as List?) ?? [];
+        statusLoaded = true;
+      }
+    } catch (_) {}
+    if (!mounted) return;
+
+    bool downloading = false;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheet) => Container(
+          padding: EdgeInsets.fromLTRB(20, 12, 20, 20 + MediaQuery.of(ctx).padding.bottom),
+          decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(10)))),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(color: const Color(0xFF7C3AED).withOpacity(0.1), borderRadius: BorderRadius.circular(14)),
+                    child: const Icon(Icons.cloud_download_outlined, color: Color(0xFF7C3AED)),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text("پشتیبان‌گیری از اطلاعات", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                        Text("همه‌ی فروش‌ها، انبار، بدهی‌ها، هزینه‌ها و همکاران", style: TextStyle(fontSize: 11.5, color: PromaxColors.textMuted)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(color: PromaxColors.cardBackground, borderRadius: BorderRadius.circular(16)),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text("پشتیبان خودکار روی سرور", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    if (!statusLoaded)
+                      const Text("وضعیت پشتیبان خودکار دریافت نشد.", style: TextStyle(fontSize: 12, color: PromaxColors.textMuted))
+                    else if (autoBackups.isEmpty)
+                      const Text(
+                        "هنوز پشتیبان خودکاری ثبت نشده است. برای فعال‌سازی، Cron Job روزانه را طبق راهنما در هاست تنظیم کنید.",
+                        style: TextStyle(fontSize: 12, height: 1.6, color: Color(0xFFB45309)),
+                      )
+                    else ...[
+                      Row(
+                        children: [
+                          const Icon(Icons.check_circle_rounded, color: PromaxColors.greenAction, size: 18),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              "آخرین پشتیبان: ${formatShamsi(autoBackups.first['time'])}",
+                              style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        "${autoBackups.length} نسخه روی سرور نگه داشته شده است.",
+                        style: const TextStyle(fontSize: 11.5, color: PromaxColors.textMuted),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+              const Text(
+                "یک نسخه‌ی کامل هم روی گوشی بگیرید و در جای امنی مثل پیام‌های ذخیره‌شده‌ی تلگرام نگه دارید. اگر سرور از دست برود، این فایل در phpMyAdmin قابل بازگردانی است.",
+                style: TextStyle(fontSize: 12, height: 1.7, color: PromaxColors.textMuted),
+              ),
+              const SizedBox(height: 16),
+              _submitButton(
+                label: "تهیه و ارسال نسخه‌ی پشتیبان",
+                icon: Icons.ios_share_rounded,
+                color: const Color(0xFF7C3AED),
+                loading: downloading,
+                onPressed: () async {
+                  setSheet(() => downloading = true);
+                  final error = await _downloadAndShareBackup();
+                  if (ctx.mounted) setSheet(() => downloading = false);
+                  if (error != null && mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+                  }
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// نسخه‌ی پشتیبان را از سرور می‌گیرد و با منوی اشتراک‌گذاری گوشی ارسال می‌کند.
+  /// در صورت خطا متن خطا را برمی‌گرداند.
+  Future<String?> _downloadAndShareBackup() async {
+    try {
+      final res = await Api.get(Uri.parse("$serverUrl?action=backup_download"), timeout: const Duration(minutes: 3));
+      final type = res.headers['content-type'] ?? '';
+      if (res.statusCode != 200 || !type.contains('gzip')) {
+        try {
+          final d = jsonDecode(res.body);
+          if (d is Map && d['message'] != null) return d['message'].toString();
+        } catch (_) {}
+        return "دریافت نسخه‌ی پشتیبان ناموفق بود";
+      }
+      final j = Jalali.now();
+      String two(int n) => n.toString().padLeft(2, '0');
+      final name = "promax-backup-${j.year}-${two(j.month)}-${two(j.day)}_${two(DateTime.now().hour)}${two(DateTime.now().minute)}.sql.gz";
+      final dir = await getTemporaryDirectory();
+      final file = File("${dir.path}/$name");
+      await file.writeAsBytes(res.bodyBytes, flush: true);
+      await SharePlus.instance.share(ShareParams(
+        files: [XFile(file.path, mimeType: 'application/gzip')],
+        text: "نسخه‌ی پشتیبان حسابدار پرومکس - ${j.year}/${two(j.month)}/${two(j.day)}",
+      ));
+      return null;
+    } on TimeoutException {
+      return "زمان دریافت نسخه‌ی پشتیبان به پایان رسید. دوباره تلاش کنید";
+    } catch (_) {
+      return "خطا در تهیه یا ارسال نسخه‌ی پشتیبان";
+    }
   }
 
   String _initial(dynamic name) {
