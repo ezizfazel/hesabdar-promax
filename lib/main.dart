@@ -13,7 +13,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'api.dart';
 import 'invoice.dart';
 
-const String serverUrl = "https://promaxmobile.ir/api.php";
+const String serverUrl = String.fromEnvironment("API_URL", defaultValue: "https://promaxmobile.ir/api.php");
 const String appVersion = "2.8.0";
 const String developerName = "ezizfd";
 
@@ -89,15 +89,18 @@ String formatToman(dynamic numValue) {
 }
 
 class PromaxColors {
-  static const Color headerGradientStart = Color(0xFF0F172A);
+  static const Color headerGradientStart = Color(0xFF0B1220);
   static const Color headerGradientEnd = Color(0xFF1E3A8A);
-  static const Color background = Color(0xFF0F172A);
-  static const Color cardBackground = Colors.white;
-  static const Color fieldBorder = Color(0xFFCBD5E1);
+  static const Color background = Color(0xFF0B1220);
+  // پس‌زمینه‌ی روشن بدنه‌ی صفحات؛ کارت‌های سفید روی آن برجسته دیده می‌شوند
+  static const Color cardBackground = Color(0xFFF4F6FB);
+  static const Color surface = Colors.white;
+  static const Color fieldBorder = Color(0xFFE2E8F0);
   static const Color blueAction = Color(0xFF2563EB);
   static const Color greenAction = Color(0xFF16A34A);
   static const Color alertBg = Color(0xFFFEE2E2);
   static const Color alertText = Color(0xFFDC2626);
+  static const Color textMain = Color(0xFF0F172A);
   static const Color textMuted = Color(0xFF64748B);
 }
 
@@ -117,12 +120,197 @@ class PromaxApp extends StatelessWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      theme: ThemeData(
-        fontFamily: 'sans-serif',
-        scaffoldBackgroundColor: PromaxColors.background,
-        colorScheme: ColorScheme.fromSeed(seedColor: PromaxColors.blueAction),
-      ),
+      theme: _buildTheme(),
       home: const LoginScreen(),
+    );
+  }
+}
+
+ThemeData _buildTheme() {
+  final scheme = ColorScheme.fromSeed(
+    seedColor: PromaxColors.blueAction,
+    primary: PromaxColors.blueAction,
+    surface: PromaxColors.surface,
+  );
+  final radius = BorderRadius.circular(14);
+  OutlineInputBorder border(Color c, [double w = 1]) =>
+      OutlineInputBorder(borderRadius: radius, borderSide: BorderSide(color: c, width: w));
+
+  return ThemeData(
+    useMaterial3: true,
+    fontFamily: 'Vazirmatn',
+    colorScheme: scheme,
+    scaffoldBackgroundColor: PromaxColors.background,
+    textTheme: ThemeData.light().textTheme.apply(
+          fontFamily: 'Vazirmatn',
+          bodyColor: PromaxColors.textMain,
+          displayColor: PromaxColors.textMain,
+        ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: Colors.white,
+      isDense: true,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+      hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
+      labelStyle: const TextStyle(color: PromaxColors.textMuted, fontSize: 13),
+      prefixIconColor: const Color(0xFF94A3B8),
+      suffixIconColor: const Color(0xFF94A3B8),
+      border: border(PromaxColors.fieldBorder),
+      enabledBorder: border(PromaxColors.fieldBorder),
+      focusedBorder: border(PromaxColors.blueAction, 1.6),
+      errorBorder: border(PromaxColors.alertText),
+      focusedErrorBorder: border(PromaxColors.alertText, 1.6),
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        minimumSize: const Size(64, 48),
+        shape: RoundedRectangleBorder(borderRadius: radius),
+        textStyle: const TextStyle(fontFamily: 'Vazirmatn', fontWeight: FontWeight.bold, fontSize: 14),
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size(64, 46),
+        shape: RoundedRectangleBorder(borderRadius: radius),
+        side: const BorderSide(color: PromaxColors.fieldBorder),
+        textStyle: const TextStyle(fontFamily: 'Vazirmatn', fontWeight: FontWeight.w600),
+      ),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(
+        shape: RoundedRectangleBorder(borderRadius: radius),
+        textStyle: const TextStyle(fontFamily: 'Vazirmatn', fontWeight: FontWeight.w600),
+      ),
+    ),
+    dialogTheme: DialogThemeData(
+      backgroundColor: Colors.white,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      titleTextStyle: const TextStyle(fontFamily: 'Vazirmatn', fontSize: 16, fontWeight: FontWeight.bold, color: PromaxColors.textMain),
+    ),
+    bottomSheetTheme: const BottomSheetThemeData(
+      backgroundColor: Colors.white,
+      surfaceTintColor: Colors.transparent,
+      showDragHandle: false,
+    ),
+    cardTheme: CardThemeData(
+      color: Colors.white,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: PromaxColors.fieldBorder),
+      ),
+    ),
+    snackBarTheme: SnackBarThemeData(
+      behavior: SnackBarBehavior.floating,
+      backgroundColor: PromaxColors.textMain,
+      contentTextStyle: const TextStyle(fontFamily: 'Vazirmatn', color: Colors.white, fontSize: 13),
+      shape: RoundedRectangleBorder(borderRadius: radius),
+    ),
+    dividerTheme: const DividerThemeData(color: Color(0xFFEEF2F7), thickness: 1),
+    checkboxTheme: CheckboxThemeData(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6))),
+    drawerTheme: const DrawerThemeData(surfaceTintColor: Colors.transparent),
+    popupMenuTheme: PopupMenuThemeData(
+      color: Colors.white,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(borderRadius: radius),
+    ),
+    progressIndicatorTheme: const ProgressIndicatorThemeData(color: PromaxColors.blueAction),
+  );
+}
+
+/// انتخاب‌گر بازه‌ی زمانی مشترک بین داشبورد موبایل و اکسسوری
+class PeriodSelector extends StatefulWidget {
+  final List<String> periods;
+  final String selected;
+  final Color color;
+  final ValueChanged<String> onSelected;
+
+  const PeriodSelector({
+    super.key,
+    required this.periods,
+    required this.selected,
+    required this.onSelected,
+    this.color = PromaxColors.blueAction,
+  });
+
+  @override
+  State<PeriodSelector> createState() => _PeriodSelectorState();
+}
+
+class _PeriodSelectorState extends State<PeriodSelector> {
+  final Map<String, GlobalKey> _keys = {};
+
+  GlobalKey _keyFor(String p) => _keys.putIfAbsent(p, () => GlobalKey());
+
+  void _revealSelected({bool animate = false}) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctx = _keyFor(widget.selected).currentContext;
+      if (ctx == null) return;
+      Scrollable.ensureVisible(
+        ctx,
+        alignment: 0.5,
+        duration: animate ? const Duration(milliseconds: 250) : Duration.zero,
+        curve: Curves.easeOut,
+      );
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _revealSelected();
+  }
+
+  @override
+  void didUpdateWidget(covariant PeriodSelector oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.selected != widget.selected) _revealSelected(animate: true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          for (final p in widget.periods)
+            Padding(
+              key: _keyFor(p),
+              padding: const EdgeInsetsDirectional.only(end: 8),
+              child: _chip(p),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _chip(String p) {
+    final isSel = p == widget.selected;
+    final color = widget.color;
+    return GestureDetector(
+      onTap: () => widget.onSelected(p),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        height: 38,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: isSel ? color : Colors.white,
+          borderRadius: BorderRadius.circular(19),
+          border: Border.all(color: isSel ? color : PromaxColors.fieldBorder),
+          boxShadow: isSel ? [BoxShadow(color: color.withOpacity(0.25), blurRadius: 10, offset: const Offset(0, 3))] : null,
+        ),
+        child: Text(
+          p,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: isSel ? FontWeight.bold : FontWeight.w500,
+            color: isSel ? Colors.white : PromaxColors.textMuted,
+          ),
+        ),
+      ),
     );
   }
 }
@@ -298,113 +486,120 @@ class PromaxPageLayout extends StatelessWidget {
     required this.body,
   });
 
+  Widget _headerButton({required IconData icon, required VoidCallback onTap, int badge = 0}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Colors.white.withOpacity(0.10)),
+            ),
+            child: Icon(icon, color: Colors.white, size: 22),
+          ),
+          if (badge > 0)
+            Positioned(
+              top: -3,
+              right: -3,
+              child: Container(
+                constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEF4444),
+                  borderRadius: BorderRadius.circular(9),
+                  border: Border.all(color: PromaxColors.background, width: 2),
+                ),
+                child: Text("$badge", style: const TextStyle(color: Colors.white, fontSize: 9.5, fontWeight: FontWeight.bold, height: 1.2)),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)]),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(Icons.bolt_rounded, color: Colors.white, size: 22),
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [PromaxColors.headerGradientStart, Color(0xFF13213F)],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+              child: Row(
+                children: [
+                  Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)], begin: Alignment.topRight, end: Alignment.bottomLeft),
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [BoxShadow(color: const Color(0xFF2563EB).withOpacity(0.35), blurRadius: 12, offset: const Offset(0, 4))],
                     ),
-                    const SizedBox(width: 10),
-                    Column(
+                    child: const Icon(Icons.phone_iphone_rounded, color: Colors.white, size: 22),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text("PROMAX", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 17, letterSpacing: 1.5)),
-                        Text("v$appVersion | by $developerName", style: const TextStyle(color: Color(0xFF93C5FD), fontSize: 9.5, fontWeight: FontWeight.bold)),
+                        const Text("پرومکس", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16, height: 1.3)),
+                        Text(
+                          "سلام، $adminName",
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11.5, height: 1.3),
+                        ),
                       ],
                     ),
-                  ],
-                ),
-                Row(
-                  children: [
-                    if (onSecurityTap != null) ...[
-                      GestureDetector(
-                        onTap: onSecurityTap,
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(color: Colors.white.withOpacity(0.12), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white24)),
-                          child: const Icon(Icons.security_rounded, color: Colors.white, size: 22),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                    ],
-                    GestureDetector(
-                      onTap: onNotificationTap,
-                      child: Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(color: Colors.white.withOpacity(0.12), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white24)),
-                            child: const Icon(Icons.notifications_none_rounded, color: Colors.white, size: 24),
-                          ),
-                          if (notificationCount > 0)
-                            Positioned(
-                              top: -4, right: -4,
-                              child: Container(
-                                padding: const EdgeInsets.all(4),
-                                decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                                child: Text("$notificationCount", style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    GestureDetector(
-                      onTap: openDrawer,
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(color: Colors.white.withOpacity(0.12), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white24)),
-                        child: const Icon(Icons.menu_rounded, color: Colors.white, size: 24),
-                      ),
-                    ),
-                  ],
-                )
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-            child: Column(
-              children: [
-                RichText(
-                  text: TextSpan(
-                    text: "$title ",
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-                    children: [TextSpan(text: "($adminName)", style: const TextStyle(color: Color(0xFF60A5FA)))],
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(subtitle, style: const TextStyle(fontSize: 11, color: Colors.white70)),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          Expanded(
-            child: Container(
-              width: double.infinity,
-              decoration: const BoxDecoration(
-                color: PromaxColors.cardBackground,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+                  if (onSecurityTap != null) ...[
+                    _headerButton(icon: Icons.admin_panel_settings_outlined, onTap: onSecurityTap!),
+                    const SizedBox(width: 8),
+                  ],
+                  _headerButton(icon: Icons.notifications_none_rounded, onTap: onNotificationTap, badge: notificationCount),
+                  const SizedBox(width: 8),
+                  _headerButton(icon: Icons.menu_rounded, onTap: openDrawer),
+                ],
               ),
-              child: ClipRRect(borderRadius: const BorderRadius.vertical(top: Radius.circular(32)), child: body),
             ),
-          ),
-        ],
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800, color: Colors.white, height: 1.3)),
+                  const SizedBox(height: 2),
+                  Text(subtitle, style: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8))),
+                ],
+              ),
+            ),
+            Expanded(
+              child: Container(
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  color: PromaxColors.cardBackground,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+                ),
+                child: ClipRRect(borderRadius: const BorderRadius.vertical(top: Radius.circular(28)), child: body),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -416,11 +611,10 @@ Widget _buildInput({required TextEditingController controller, required String h
     keyboardType: isNumber || isPhone ? TextInputType.number : TextInputType.text,
     inputFormatters: isNumber ? [FilteringTextInputFormatter.digitsOnly, CurrencyInputFormatter()] : null,
     onChanged: onChanged,
-    style: const TextStyle(fontSize: 13),
+    style: const TextStyle(fontSize: 14),
     decoration: InputDecoration(
-      hintText: hint, prefixIcon: Icon(prefixIcon, color: PromaxColors.textMuted, size: 20),
-      filled: true, fillColor: Colors.white, contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: PromaxColors.fieldBorder, width: 1.2)),
+      hintText: hint,
+      prefixIcon: Icon(prefixIcon, size: 20),
     ),
   );
 }
@@ -625,83 +819,114 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(28),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: PromaxColors.blueAction.withOpacity(0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.phone_android_rounded, size: 54, color: PromaxColors.blueAction),
-                ),
-                const SizedBox(height: 12),
-                const Text(
-                  "PROMAX MOBILE",
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, letterSpacing: 1.5),
-                ),
-                Text(
-                  "توسعه‌دهنده: $developerName | نسخه $appVersion",
-                  style: const TextStyle(fontSize: 11, color: PromaxColors.textMuted),
-                ),
-                const SizedBox(height: 24),
-                TextField(
-                  controller: userCtl,
-                  decoration: InputDecoration(
-                    labelText: "نام کاربری",
-                    prefixIcon: const Icon(Icons.person_outline),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: passCtl,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: "رمز عبور",
-                    prefixIcon: const Icon(Icons.lock_outline),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                FilledButton(
-                  onPressed: loading ? null : login,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: PromaxColors.blueAction,
-                    minimumSize: const Size.fromHeight(50),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  ),
-                  child: loading
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text("ورود به سامانه", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-                ),
-                if (canCheckBiometrics && hasSavedSession) ...[
-                  const SizedBox(height: 12),
-                  OutlinedButton.icon(
-                    onPressed: () => _biometricLogin(),
-                    icon: const Icon(Icons.fingerprint, color: PromaxColors.blueAction, size: 26),
-                    label: const Text(
-                      "ورود با اثر انگشت / Face ID",
-                      style: TextStyle(color: PromaxColors.blueAction, fontWeight: FontWeight.bold),
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [PromaxColors.headerGradientStart, Color(0xFF13213F), PromaxColors.headerGradientEnd],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 76,
+                      height: 76,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)], begin: Alignment.topRight, end: Alignment.bottomLeft),
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [BoxShadow(color: const Color(0xFF2563EB).withOpacity(0.45), blurRadius: 24, offset: const Offset(0, 8))],
+                      ),
+                      child: const Icon(Icons.phone_iphone_rounded, size: 38, color: Colors.white),
                     ),
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size.fromHeight(48),
-                      side: const BorderSide(color: PromaxColors.blueAction),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    const SizedBox(height: 18),
+                    const Text(
+                      "حسابدار پرومکس",
+                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: Colors.white),
                     ),
-                  ),
-                ]
-              ],
+                    const SizedBox(height: 4),
+                    const Text(
+                      "مدیریت خرید، فروش و انبار موبایل‌فروشی",
+                      style: TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
+                    ),
+                    const SizedBox(height: 28),
+                    Container(
+                      padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(28),
+                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.25), blurRadius: 30, offset: const Offset(0, 12))],
+                      ),
+                      child: AutofillGroup(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            const Text("ورود به حساب", style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 4),
+                            const Text("نام کاربری و رمز عبور خود را وارد کنید", style: TextStyle(fontSize: 12, color: PromaxColors.textMuted)),
+                            const SizedBox(height: 20),
+                            TextField(
+                              controller: userCtl,
+                              textInputAction: TextInputAction.next,
+                              autofillHints: const [AutofillHints.username],
+                              decoration: const InputDecoration(
+                                labelText: "نام کاربری",
+                                prefixIcon: Icon(Icons.person_outline_rounded),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            TextField(
+                              controller: passCtl,
+                              obscureText: true,
+                              textInputAction: TextInputAction.done,
+                              autofillHints: const [AutofillHints.password],
+                              onSubmitted: (_) => loading ? null : login(),
+                              decoration: const InputDecoration(
+                                labelText: "رمز عبور",
+                                prefixIcon: Icon(Icons.lock_outline_rounded),
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                            FilledButton(
+                              onPressed: loading ? null : login,
+                              style: FilledButton.styleFrom(
+                                backgroundColor: PromaxColors.blueAction,
+                                minimumSize: const Size.fromHeight(52),
+                              ),
+                              child: loading
+                                  ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
+                                  : const Text("ورود به سامانه", style: TextStyle(fontSize: 15)),
+                            ),
+                            if (canCheckBiometrics && hasSavedSession) ...[
+                              const SizedBox(height: 10),
+                              OutlinedButton.icon(
+                                onPressed: () => _biometricLogin(),
+                                icon: const Icon(Icons.fingerprint_rounded, color: PromaxColors.blueAction, size: 24),
+                                label: const Text("ورود با اثر انگشت", style: TextStyle(color: PromaxColors.blueAction)),
+                                style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(50)),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      "نسخه $appVersion  •  توسعه‌دهنده: $developerName",
+                      style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         ),
@@ -1195,17 +1420,21 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       ),
       body: accessiblePages[_currentIndex],
       bottomNavigationBar: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-        decoration: BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -4))]),
+        padding: const EdgeInsets.fromLTRB(8, 8, 8, 6),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          border: Border(top: BorderSide(color: PromaxColors.fieldBorder)),
+        ),
         child: SafeArea(
+          top: false,
+          // در چینش راست‌به‌چپ اولین آیتم (آمار) در سمت راست قرار می‌گیرد
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _navItem(icon: Icons.headphones_outlined, label: "جانبی", index: 4),
-              _navItem(icon: Icons.inventory_2_outlined, label: "انبار", index: 3),
-              _navItem(icon: Icons.point_of_sale_rounded, label: "فروش", index: 2),
-              _navItem(icon: Icons.shopping_cart_outlined, label: "خرید", index: 1),
               _navItem(icon: Icons.insights_rounded, label: "آمار مالی", index: 0),
+              _navItem(icon: Icons.add_shopping_cart_rounded, label: "خرید", index: 1),
+              _navItem(icon: Icons.point_of_sale_rounded, label: "فروش", index: 2),
+              _navItem(icon: Icons.inventory_2_outlined, label: "انبار", index: 3),
+              _navItem(icon: Icons.headphones_outlined, label: "جانبی", index: 4),
             ],
           ),
         ),
@@ -1215,22 +1444,29 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   Widget _navItem({required IconData icon, required String label, required int index}) {
     final isSelected = _currentIndex == index;
-    return GestureDetector(
-      onTap: () => setState(() => _currentIndex = index),
-      behavior: HitTestBehavior.opaque,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-            decoration: BoxDecoration(color: isSelected ? const Color(0xFFE0E7FF) : Colors.transparent, borderRadius: BorderRadius.circular(16)),
-            child: Icon(icon, color: isSelected ? PromaxColors.blueAction : PromaxColors.textMuted, size: 22),
-          ),
-          const SizedBox(height: 2),
-          Text(label, style: TextStyle(fontSize: 10, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal, color: isSelected ? PromaxColors.blueAction : PromaxColors.textMuted)),
-        ],
+    final color = isSelected ? PromaxColors.blueAction : const Color(0xFF94A3B8);
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _currentIndex = index),
+        behavior: HitTestBehavior.opaque,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeOut,
+              width: 56,
+              padding: const EdgeInsets.symmetric(vertical: 5),
+              decoration: BoxDecoration(
+                color: isSelected ? const Color(0xFFE8EFFE) : Colors.transparent,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Icon(icon, color: color, size: 23),
+            ),
+            const SizedBox(height: 3),
+            Text(label, style: TextStyle(fontSize: 11, fontWeight: isSelected ? FontWeight.bold : FontWeight.w500, color: isSelected ? PromaxColors.blueAction : PromaxColors.textMuted)),
+          ],
+        ),
       ),
     );
   }
@@ -1329,7 +1565,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
               controller: payCtl,
               keyboardType: TextInputType.number,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly, CurrencyInputFormatter()],
-              decoration: const InputDecoration(labelText: "مبلغ دریافتی (تومان)", border: OutlineInputBorder()),
+              decoration: const InputDecoration(labelText: "مبلغ دریافتی (تومان)"),
             ),
           ],
         ),
@@ -1379,7 +1615,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
               controller: balCtl,
               keyboardType: TextInputType.number,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly, CurrencyInputFormatter()],
-              decoration: const InputDecoration(labelText: "موجودی کارت (تومان)", border: OutlineInputBorder()),
+              decoration: const InputDecoration(labelText: "موجودی کارت (تومان)"),
             ),
           ],
         ),
@@ -1421,21 +1657,21 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
               children: [
                 DropdownButtonFormField<String>(
                   value: cat,
-                  decoration: const InputDecoration(labelText: "دسته‌‌بندی هزینه", border: OutlineInputBorder()),
+                  decoration: const InputDecoration(labelText: "دسته‌‌بندی هزینه"),
                   items: ['اجاره مغازه', 'قبوض آب/برق/گاز', 'برداشت سود شخصی', 'پیک و اسنپ', 'حقوق و شاگرد', 'متفرقه'].map((c) => DropdownMenuItem(value: c, child: Text(c, style: const TextStyle(fontSize: 12)))).toList(),
                   onChanged: (v) => setDialogState(() => cat = v!),
                 ),
                 const SizedBox(height: 10),
-                TextField(controller: titleCtl, decoration: const InputDecoration(labelText: "عنوان هزینه", border: OutlineInputBorder())),
+                TextField(controller: titleCtl, decoration: const InputDecoration(labelText: "عنوان هزینه")),
                 const SizedBox(height: 10),
                 TextField(
                   controller: amountCtl,
                   keyboardType: TextInputType.number,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly, CurrencyInputFormatter()],
-                  decoration: const InputDecoration(labelText: "مبلغ برداشت (تومان)", border: OutlineInputBorder()),
+                  decoration: const InputDecoration(labelText: "مبلغ برداشت (تومان)"),
                 ),
                 const SizedBox(height: 10),
-                TextField(controller: descCtl, decoration: const InputDecoration(labelText: "توضیحات (اختیاری)", border: OutlineInputBorder())),
+                TextField(controller: descCtl, decoration: const InputDecoration(labelText: "توضیحات (اختیاری)")),
               ],
             ),
           ),
@@ -1537,7 +1773,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
     final int totalExpenses = data?['total_expenses'] ?? 0;
 
     return PromaxPageLayout(
-      title: "گزارش‌ها و آمارها (موبایل)",
+      title: "گزارش مالی موبایل",
       adminName: widget.adminData['full_name'],
       subtitle: "نقدینگی و عملکرد مالی اختصاصی موبایل",
       openDrawer: widget.openDrawer,
@@ -1564,26 +1800,13 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
                   child: ListView(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                     children: [
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          children: periodKeys.keys.map((p) {
-                            final isSel = selectedPeriodTitle == p;
-                            return Padding(
-                              padding: const EdgeInsets.only(left: 6),
-                              child: ChoiceChip(
-                                label: Text(p, style: TextStyle(fontSize: 11, fontWeight: isSel ? FontWeight.bold : FontWeight.normal, color: isSel ? Colors.white : Colors.black87)),
-                                selected: isSel,
-                                selectedColor: PromaxColors.blueAction,
-                                backgroundColor: Colors.white,
-                                onSelected: (_) {
-                                  setState(() => selectedPeriodTitle = p);
-                                  loadAnalytics();
-                                },
-                              ),
-                            );
-                          }).toList(),
-                        ),
+                      PeriodSelector(
+                        periods: periodKeys.keys.toList(),
+                        selected: selectedPeriodTitle,
+                        onSelected: (p) {
+                          setState(() => selectedPeriodTitle = p);
+                          loadAnalytics();
+                        },
                       ),
                       const SizedBox(height: 14),
 
@@ -2314,7 +2537,7 @@ class _InventoryAndReportsScreenState extends State<InventoryAndReportsScreen> {
             children: [
               DropdownButtonFormField<String>(
                 value: currentReg,
-                decoration: const InputDecoration(labelText: "وضعیت رجیستری", border: OutlineInputBorder()),
+                decoration: const InputDecoration(labelText: "وضعیت رجیستری"),
                 items: registryOptions.map((r) => DropdownMenuItem(value: r, child: Text(r, style: const TextStyle(fontSize: 12)))).toList(),
                 onChanged: (v) => setDState(() => currentReg = v!),
               ),
@@ -2369,18 +2592,18 @@ class _InventoryAndReportsScreenState extends State<InventoryAndReportsScreen> {
               children: [
                 DropdownButtonFormField<String>(
                   value: selectedBrand,
-                  decoration: const InputDecoration(labelText: "برند دستگاه", border: OutlineInputBorder()),
+                  decoration: const InputDecoration(labelText: "برند دستگاه"),
                   items: popularBrands.map((b) => DropdownMenuItem(value: b, child: Text(b, style: const TextStyle(fontSize: 12)))).toList(),
                   onChanged: (v) => setDState(() => selectedBrand = v!),
                 ),
                 const SizedBox(height: 10),
-                TextField(controller: modelCtl, decoration: const InputDecoration(labelText: "مدل دستگاه", border: OutlineInputBorder())),
+                TextField(controller: modelCtl, decoration: const InputDecoration(labelText: "مدل دستگاه")),
                 const SizedBox(height: 10),
-                TextField(controller: imeiCtl, decoration: const InputDecoration(labelText: "IMEI 1", border: OutlineInputBorder())),
+                TextField(controller: imeiCtl, decoration: const InputDecoration(labelText: "IMEI 1")),
                 const SizedBox(height: 10),
-                TextField(controller: imei2Ctl, decoration: const InputDecoration(labelText: "IMEI 2", border: OutlineInputBorder())),
+                TextField(controller: imei2Ctl, decoration: const InputDecoration(labelText: "IMEI 2")),
                 const SizedBox(height: 10),
-                TextField(controller: priceCtl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: "مبلغ (تومان)", border: OutlineInputBorder())),
+                TextField(controller: priceCtl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: "مبلغ (تومان)")),
               ],
             ),
           ),
@@ -2507,7 +2730,7 @@ class _InventoryAndReportsScreenState extends State<InventoryAndReportsScreen> {
     }).toList();
 
     return PromaxPageLayout(
-      title: "انبار موبایل پرومکس",
+      title: "انبار موبایل",
       adminName: widget.adminData['full_name'],
       subtitle: "تفکیک کامل موجودی‌ها و دستگاه‌های فروخته‌شده",
       openDrawer: widget.openDrawer,
@@ -2709,7 +2932,7 @@ class _BuyPhoneScreenState extends State<BuyPhoneScreen> {
   @override
   Widget build(BuildContext context) {
     return PromaxPageLayout(
-      title: "خرید کالای",
+      title: "خرید کالا",
       adminName: widget.adminData['full_name'],
       subtitle: "ثبت دستگاه با دو IMEI و استعلام همتا",
       openDrawer: widget.openDrawer,
@@ -3372,26 +3595,14 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: periodKeys.keys.map((p) {
-                        final isSel = selectedPeriodTitle == p;
-                        return Padding(
-                          padding: const EdgeInsets.only(left: 6),
-                          child: ChoiceChip(
-                            label: Text(p, style: TextStyle(fontSize: 11, fontWeight: isSel ? FontWeight.bold : FontWeight.normal, color: isSel ? Colors.white : Colors.black87)),
-                            selected: isSel,
-                            selectedColor: Colors.purple.shade700,
-                            backgroundColor: Colors.white,
-                            onSelected: (_) {
-                              setState(() => selectedPeriodTitle = p);
-                              load();
-                            },
-                          ),
-                        );
-                      }).toList(),
-                    ),
+                  PeriodSelector(
+                    periods: periodKeys.keys.toList(),
+                    selected: selectedPeriodTitle,
+                    color: Colors.purple.shade700,
+                    onSelected: (p) {
+                      setState(() => selectedPeriodTitle = p);
+                      load();
+                    },
                   ),
                   const SizedBox(height: 12),
 
