@@ -31,7 +31,6 @@ jobs:
           
           # تنظیم دسترسی‌های مانیفست
           sed -i '/<application/i \    <uses-permission android:name="android.permission.INTERNET"/>\n    <uses-permission android:name="android.permission.CAMERA"/>\n    <uses-permission android:name="android.permission.USE_BIOMETRIC"/>\n    <uses-permission android:name="android.permission.USE_FINGERPRINT"/>\n    <uses-feature android:name="android.hardware.camera" android:required="false" />\n    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />' android/app/src/main/AndroidManifest.xml
-          sed -i 's/<application/<application android:usesCleartextTraffic="true"/' android/app/src/main/AndroidManifest.xml
           sed -i 's/minSdkVersion = .*/minSdkVersion = 21/' android/app/build.gradle.kts || true
 
           # بازنویسی مستقیم و استاندارد MainActivity.kt برای حل خطای FragmentActivity

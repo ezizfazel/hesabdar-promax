@@ -1,16 +1,16 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:http/http.dart' as http;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:printing/printing.dart';
 import 'package:qr_code_scanner_plus/qr_code_scanner_plus.dart';
 import 'package:shamsi_date/shamsi_date.dart';
 import 'package:local_auth/local_auth.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'api.dart';
 import 'invoice.dart';
 
 const String serverUrl = "https://promaxmobile.ir/api.php";
@@ -40,6 +40,7 @@ const List<String> registryOptions = [
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  Api.loginScreenBuilder = () => const LoginScreen();
   runApp(const PromaxApp());
 }
 
@@ -107,6 +108,7 @@ class PromaxApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'حسابدار پرومکس',
+      navigatorKey: Api.navigatorKey,
       debugShowCheckedModeBanner: false,
       locale: const Locale('fa', 'IR'),
       supportedLocales: const [Locale('fa', 'IR')],
@@ -501,29 +503,39 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final userCtl = TextEditingController(text: 'admin1');
-  final passCtl = TextEditingController(text: '123456');
+  final userCtl = TextEditingController();
+  final passCtl = TextEditingController();
   bool loading = false;
   bool canCheckBiometrics = false;
+  bool hasSavedSession = false;
   final LocalAuthentication auth = LocalAuthentication();
-  final storage = const FlutterSecureStorage();
 
   @override
   void initState() {
     super.initState();
-    _loadSavedCredentials();
-    _checkBiometricSupport();
+    _init();
   }
 
-  Future<void> _loadSavedCredentials() async {
-    final savedUser = await storage.read(key: 'promax_user');
-    final savedPass = await storage.read(key: 'promax_pass');
-    if (savedUser != null && savedPass != null) {
-      setState(() {
-        userCtl.text = savedUser;
-        passCtl.text = savedPass;
-      });
-      _tryAutoBiometricLogin();
+  @override
+  void dispose() {
+    userCtl.dispose();
+    passCtl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _init() async {
+    // نسخه‌های قبلی رمز عبور را روی گوشی ذخیره می‌کردند؛ پاکش می‌کنیم.
+    await Api.purgeLegacyPassword();
+    final savedUser = await Api.savedUsername();
+    final savedAdmin = await Api.loadSavedAdmin();
+    await _checkBiometricSupport();
+    if (!mounted) return;
+    setState(() {
+      if (savedUser != null) userCtl.text = savedUser;
+      hasSavedSession = savedAdmin != null;
+    });
+    if (hasSavedSession && canCheckBiometrics) {
+      _biometricLogin(biometricOnly: true, silent: true);
     }
   }
 
@@ -531,73 +543,82 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       final bool supported = await auth.isDeviceSupported();
       final bool canCheck = await auth.canCheckBiometrics;
-      setState(() => canCheckBiometrics = supported && canCheck);
-    } catch (_) {}
+      canCheckBiometrics = supported && canCheck;
+    } catch (_) {
+      canCheckBiometrics = false;
+    }
   }
 
-  Future<void> _tryAutoBiometricLogin() async {
-    final savedUser = await storage.read(key: 'promax_user');
-    final savedPass = await storage.read(key: 'promax_pass');
-    if (savedUser != null && savedPass != null && canCheckBiometrics) {
-      try {
-        bool authenticated = await auth.authenticate(
-          localizedReason: 'ورود سریع به حسابدار پرومکس',
-          options: const AuthenticationOptions(biometricOnly: true),
-        );
-        if (authenticated) {
-          login();
-        }
-      } catch (_) {}
-    }
+  void _showMessage(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
+
+  void _openMain(Map<String, dynamic> admin) {
+    if (!mounted) return;
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => MainNavigationScreen(adminData: admin)),
+    );
   }
 
   Future<void> login() async {
+    final username = userCtl.text.trim();
+    final password = passCtl.text;
+    if (username.isEmpty || password.isEmpty) {
+      _showMessage("نام کاربری و رمز عبور را وارد کنید");
+      return;
+    }
     setState(() => loading = true);
     try {
-      final res = await http.post(
+      await Api.clearSession();
+      final res = await Api.post(
         Uri.parse("$serverUrl?action=login"),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          "username": userCtl.text.trim(),
-          "password": passCtl.text.trim(),
-        }),
+        body: jsonEncode({"username": username, "password": password}),
       );
       final data = jsonDecode(res.body);
-      setState(() => loading = false);
-      if (data['status'] == 'success') {
-        await storage.write(key: 'promax_user', value: userCtl.text.trim());
-        await storage.write(key: 'promax_pass', value: passCtl.text.trim());
-        if (!mounted) return;
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => MainNavigationScreen(adminData: data['admin']),
-          ),
-        );
-      } else {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(data['message'])),
-        );
+      if (data is! Map || data['status'] != 'success' || data['admin'] is! Map) {
+        _showMessage(data is Map && data['message'] != null ? data['message'].toString() : "ورود ناموفق بود");
+        return;
       }
+      final admin = Map<String, dynamic>.from(data['admin'] as Map);
+      final token = data['token'];
+      if (token is String && token.isNotEmpty) {
+        await Api.saveSession(token: token, admin: admin, username: username);
+      } else {
+        // سرور هنوز توکن صادر نمی‌کند (نسخه‌ی قدیمی api.php).
+        // رمز عبور ذخیره نمی‌شود، پس ورود با اثر انگشت تا به‌روزرسانی سرور غیرفعال است.
+        _showMessage("هشدار: سرور هنوز از ورود امن (توکن) پشتیبانی نمی‌کند.");
+      }
+      passCtl.clear();
+      _openMain(admin);
+    } on TimeoutException {
+      _showMessage("پاسخی از سرور دریافت نشد. اتصال اینترنت را بررسی کنید.");
     } catch (_) {
-      setState(() => loading = false);
+      _showMessage("خطا در ارتباط با سرور");
+    } finally {
+      if (mounted) setState(() => loading = false);
     }
   }
 
-  Future<void> _authenticateBiometric() async {
+  Future<void> _biometricLogin({bool biometricOnly = false, bool silent = false}) async {
+    final admin = await Api.loadSavedAdmin();
+    if (admin == null) {
+      if (!silent) _showMessage("ابتدا یک بار با نام کاربری و رمز عبور وارد شوید");
+      return;
+    }
     try {
-      bool authenticated = await auth.authenticate(
-        localizedReason: 'لطفاً اثر انگشت خود را تایید کنید',
-        options: const AuthenticationOptions(biometricOnly: false),
+      final bool authenticated = await auth.authenticate(
+        localizedReason: 'ورود سریع به حسابدار پرومکس',
+        options: AuthenticationOptions(biometricOnly: biometricOnly),
       );
-      if (authenticated) {
-        login();
-      }
+      if (!authenticated) return;
+      if (!await Api.restoreToken()) return;
+      // اعتبار توکن با اولین درخواست بررسی می‌شود؛ اگر منقضی باشد سرور 401 می‌دهد
+      // و Api کاربر را به صفحه‌ی ورود برمی‌گرداند.
+      _openMain(admin);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("خطا در بیومتریک: $e")),
-      );
+      if (!silent) _showMessage("خطا در احراز هویت بیومتریک");
     }
   }
 
@@ -664,10 +685,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       ? const CircularProgressIndicator(color: Colors.white)
                       : const Text("ورود به سامانه", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
                 ),
-                if (canCheckBiometrics) ...[
+                if (canCheckBiometrics && hasSavedSession) ...[
                   const SizedBox(height: 12),
                   OutlinedButton.icon(
-                    onPressed: _authenticateBiometric,
+                    onPressed: () => _biometricLogin(),
                     icon: const Icon(Icons.fingerprint, color: PromaxColors.blueAction, size: 26),
                     label: const Text(
                       "ورود با اثر انگشت / Face ID",
@@ -717,7 +738,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   Future<void> loadNotifications() async {
     try {
-      final res = await http.get(Uri.parse("$serverUrl?action=get_notifications"));
+      final res = await Api.get(Uri.parse("$serverUrl?action=get_notifications"));
       if (res.statusCode == 200) {
         final d = jsonDecode(res.body);
         if (d['status'] == 'success') setState(() => notifications = d['data']);
@@ -799,8 +820,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   }
 
   void _showAdminManagementPanel() async {
-    final res = await http.get(Uri.parse("$serverUrl?action=get_admins"));
-    final logRes = await http.get(Uri.parse("$serverUrl?action=get_logs"));
+    final res = await Api.get(Uri.parse("$serverUrl?action=get_admins"));
+    final logRes = await Api.get(Uri.parse("$serverUrl?action=get_logs"));
     List<dynamic> adminsList = [];
     List<dynamic> logsList = [];
     if (res.statusCode == 200) adminsList = jsonDecode(res.body)['data'];
@@ -837,7 +858,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                           FilledButton.icon(
                             onPressed: () {
                               _showCreateAdminDialog(() async {
-                                final r = await http.get(Uri.parse("$serverUrl?action=get_admins"));
+                                final r = await Api.get(Uri.parse("$serverUrl?action=get_admins"));
                                 setPanelState(() => adminsList = jsonDecode(r.body)['data']);
                               });
                             },
@@ -863,7 +884,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                                             tooltip: "تغییر دسترسی",
                                             icon: const Icon(Icons.edit_attributes_rounded, color: PromaxColors.blueAction),
                                             onPressed: () => _editAdminPermissionsDialog(a, () async {
-                                              final r = await http.get(Uri.parse("$serverUrl?action=get_admins"));
+                                              final r = await Api.get(Uri.parse("$serverUrl?action=get_admins"));
                                               setPanelState(() => adminsList = jsonDecode(r.body)['data']);
                                             }),
                                           ),
@@ -871,7 +892,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                                             tooltip: "حذف همکار",
                                             icon: const Icon(Icons.delete_outline, color: Colors.red),
                                             onPressed: () => _deleteAdminDialog(a, () async {
-                                              final r = await http.get(Uri.parse("$serverUrl?action=get_admins"));
+                                              final r = await Api.get(Uri.parse("$serverUrl?action=get_admins"));
                                               setPanelState(() => adminsList = jsonDecode(r.body)['data']);
                                             }),
                                           ),
@@ -940,7 +961,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             FilledButton(
               onPressed: () async {
                 if (userCtl.text.isEmpty || passCtl.text.isEmpty) return;
-                await http.post(
+                await Api.post(
                   Uri.parse("$serverUrl?action=create_admin"),
                   headers: {"Content-Type": "application/json"},
                   body: jsonEncode({
@@ -973,7 +994,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () async {
-              await http.post(
+              await Api.post(
                 Uri.parse("$serverUrl?action=delete_admin"),
                 headers: {"Content-Type": "application/json"},
                 body: jsonEncode({
@@ -1013,7 +1034,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("انصراف")),
             FilledButton(
               onPressed: () async {
-                await http.post(
+                await Api.post(
                   Uri.parse("$serverUrl?action=update_admin_permissions"),
                   headers: {"Content-Type": "application/json"},
                   body: jsonEncode({
@@ -1055,7 +1076,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("انصراف")),
           FilledButton(
             onPressed: () async {
-              final res = await http.post(
+              final res = await Api.post(
                 Uri.parse("$serverUrl?action=update_profile"),
                 headers: {"Content-Type": "application/json"},
                 body: jsonEncode({
@@ -1159,7 +1180,14 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                 tileColor: Colors.red.shade50,
                 leading: const Icon(Icons.logout_rounded, color: PromaxColors.alertText),
                 title: const Text("خروج از حساب کاربری", style: TextStyle(color: PromaxColors.alertText, fontWeight: FontWeight.bold)),
-                onTap: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginScreen())),
+                onTap: () async {
+                  await Api.logout(serverUrl);
+                  if (!context.mounted) return;
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (_) => const LoginScreen()),
+                    (_) => false,
+                  );
+                },
               ),
             ),
           ],
@@ -1259,7 +1287,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
 
     final key = periodKeys[selectedPeriodTitle] ?? 'this_month';
     try {
-      final res = await http.get(Uri.parse("$serverUrl?action=get_summary&period=$key")).timeout(const Duration(seconds: 12));
+      final res = await Api.get(Uri.parse("$serverUrl?action=get_summary&period=$key")).timeout(const Duration(seconds: 12));
       if (res.statusCode == 200) {
         final parsed = jsonDecode(res.body);
         if (parsed['status'] == 'success') {
@@ -1312,7 +1340,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
             onPressed: () async {
               final int cleanPay = int.tryParse(payCtl.text.replaceAll(',', '')) ?? 0;
               if (cleanPay <= 0) return;
-              final res = await http.post(
+              final res = await Api.post(
                 Uri.parse("$serverUrl?action=pay_debt"),
                 headers: {"Content-Type": "application/json"},
                 body: jsonEncode({
@@ -1360,7 +1388,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
           FilledButton(
             onPressed: () async {
               final cleanBal = int.tryParse(balCtl.text.replaceAll(',', '')) ?? 0;
-              await http.post(
+              await Api.post(
                 Uri.parse("$serverUrl?action=update_bank_balance"),
                 headers: {"Content-Type": "application/json"},
                 body: jsonEncode({"bank_balance": cleanBal}),
@@ -1417,7 +1445,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
               style: FilledButton.styleFrom(backgroundColor: Colors.red.shade700),
               onPressed: () async {
                 if (amountCtl.text.isEmpty) return;
-                await http.post(
+                await Api.post(
                   Uri.parse("$serverUrl?action=add_expense"),
                   headers: {"Content-Type": "application/json"},
                   body: jsonEncode({
@@ -2234,7 +2262,7 @@ class _InventoryAndReportsScreenState extends State<InventoryAndReportsScreen> {
   Future<void> load() async {
     setState(() => loading = true);
     try {
-      final resPhones = await http.get(Uri.parse("$serverUrl?action=get_all_phones"));
+      final resPhones = await Api.get(Uri.parse("$serverUrl?action=get_all_phones"));
       if (resPhones.statusCode == 200) {
         setState(() {
           allPhones = jsonDecode(resPhones.body)['data'];
@@ -2257,7 +2285,7 @@ class _InventoryAndReportsScreenState extends State<InventoryAndReportsScreen> {
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () async {
-              await http.post(
+              await Api.post(
                 Uri.parse("$serverUrl?action=delete_phone"),
                 headers: {"Content-Type": "application/json"},
                 body: jsonEncode({"phone_id": item['id'], "admin_name": widget.adminData['full_name']}),
@@ -2302,7 +2330,7 @@ class _InventoryAndReportsScreenState extends State<InventoryAndReportsScreen> {
             TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("انصراف")),
             FilledButton(
               onPressed: () async {
-                await http.post(
+                await Api.post(
                   Uri.parse("$serverUrl?action=update_registry_status"),
                   headers: {"Content-Type": "application/json"},
                   body: jsonEncode({
@@ -2360,7 +2388,7 @@ class _InventoryAndReportsScreenState extends State<InventoryAndReportsScreen> {
             TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("انصراف")),
             FilledButton(
               onPressed: () async {
-                await http.post(
+                await Api.post(
                   Uri.parse("$serverUrl?action=update_order"),
                   headers: {"Content-Type": "application/json"},
                   body: jsonEncode({
@@ -2621,7 +2649,7 @@ class _BuyPhoneScreenState extends State<BuyPhoneScreen> {
     final now = Jalali.now();
     final timeNow = "${DateTime.now().hour}:${DateTime.now().minute.toString().padLeft(2, '0')}";
 
-    final res = await http.post(
+    final res = await Api.post(
       Uri.parse("$serverUrl?action=buy_phone"),
       headers: {"Content-Type": "application/json"},
       body: jsonEncode({
@@ -2849,7 +2877,7 @@ class _SellPhoneScreenState extends State<SellPhoneScreen> {
     final timeNow = "${DateTime.now().hour}:${DateTime.now().minute.toString().padLeft(2, '0')}";
 
     try {
-      final res = await http.post(
+      final res = await Api.post(
         Uri.parse("$serverUrl?action=sell_phone"),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
@@ -3116,8 +3144,8 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
     setState(() => loading = true);
     final key = periodKeys[selectedPeriodTitle] ?? 'this_month';
     try {
-      final res = await http.get(Uri.parse("$serverUrl?action=get_accessories"));
-      final summaryRes = await http.get(Uri.parse("$serverUrl?action=get_acc_summary&period=$key"));
+      final res = await Api.get(Uri.parse("$serverUrl?action=get_accessories"));
+      final summaryRes = await Api.get(Uri.parse("$serverUrl?action=get_acc_summary&period=$key"));
 
       if (res.statusCode == 200) {
         final d = jsonDecode(res.body);
@@ -3181,7 +3209,7 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
           FilledButton(
             onPressed: () async {
               if (nameCtl.text.isEmpty || stockCtl.text.isEmpty) return;
-              await http.post(
+              await Api.post(
                 Uri.parse("$serverUrl?action=add_accessory"),
                 headers: {"Content-Type": "application/json"},
                 body: jsonEncode({
@@ -3238,7 +3266,7 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("انصراف")),
           FilledButton(
             onPressed: () async {
-              await http.post(
+              await Api.post(
                 Uri.parse("$serverUrl?action=update_accessory"),
                 headers: {"Content-Type": "application/json"},
                 body: jsonEncode({
@@ -3292,7 +3320,7 @@ class _AccessoriesScreenState extends State<AccessoriesScreen> {
           FilledButton(
             onPressed: () async {
               final finalPrice = int.tryParse(customPriceCtl.text.replaceAll(',', '')) ?? item['sale_price'];
-              await http.post(
+              await Api.post(
                 Uri.parse("$serverUrl?action=sell_accessory"),
                 headers: {"Content-Type": "application/json"},
                 body: jsonEncode({
